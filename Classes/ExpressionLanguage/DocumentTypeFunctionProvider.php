@@ -23,9 +23,7 @@ use Symfony\Component\ExpressionLanguage\ExpressionFunctionProviderInterface;
 use TYPO3\CMS\Core\ExpressionLanguage\RequestWrapper;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
-use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 /**
  * Provider class for additional "getDocumentType" function to the ExpressionLanguage.
@@ -60,16 +58,6 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
     protected ?Document $document;
 
     /**
-     * @var ConfigurationManager
-     */
-    protected $configurationManager;
-
-    public function injectConfigurationManager(ConfigurationManager $configurationManager): void
-    {
-        $this->configurationManager = $configurationManager;
-    }
-
-    /**
      * @var DocumentRepository
      */
     protected $documentRepository;
@@ -92,14 +80,10 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
      */
     protected function initializeRepositories(int $storagePid): void
     {
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        // TODO: change it as it is deprecated since 10.4 and will be removed in 12.x
-        // TODO: necessary to test calendar view after updating this code
-        $configurationManager = $objectManager->get(ConfigurationManager::class);
-        $this->injectConfigurationManager($configurationManager);
-        $frameworkConfiguration = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK);
-        $frameworkConfiguration['persistence']['storagePid'] = MathUtility::forceIntegerInRange((int) $storagePid, 0);
-        $this->configurationManager->setConfiguration($frameworkConfiguration);
+        $configurationManager = GeneralUtility::makeInstance(ConfigurationManagerInterface::class);
+        $frameworkConfiguration = $configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK);
+        $frameworkConfiguration['persistence']['storagePid'] = MathUtility::forceIntegerInRange($storagePid, 0);
+        $configurationManager->setConfiguration($frameworkConfiguration);
         $this->documentRepository = GeneralUtility::makeInstance(DocumentRepository::class);
     }
 

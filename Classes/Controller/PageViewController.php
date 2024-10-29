@@ -13,10 +13,12 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Common\DocumentAnnotation;
+use Kitodo\Dlf\Common\Helper;
 use Kitodo\Dlf\Common\IiifManifest;
 use Kitodo\Dlf\Common\MetsDocument;
 use Kitodo\Dlf\Domain\Model\Document;
 use Kitodo\Dlf\Domain\Model\FormAddDocument;
+use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use Ubl\Iiif\Presentation\Common\Model\Resources\ManifestInterface;
@@ -89,15 +91,15 @@ class PageViewController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface the response
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissingOrEmpty()) {
             // Quit without doing anything if required variables are not set.
-            return;
+            return $this->htmlResponse();
         } else {
             if (isset($this->settings['multiViewType']) && $this->document->getCurrentDocument()->tableOfContents[0]['type'] === $this->settings['multiViewType'] && empty($this->requestData['multiview'])) {
                 $params = array_merge(
@@ -120,18 +122,20 @@ class PageViewController extends AbstractController
 
         $this->setPage();
 
+        $page = $this->requestData['page'] ?? 0;
+
         // Get image data.
-        $this->images[0] = $this->getImage($this->requestData['page']);
-        $this->fulltexts[0] = $this->getFulltext($this->requestData['page']);
-        $this->annotationContainers[0] = $this->getAnnotationContainers($this->requestData['page']);
-        if ($this->requestData['double'] && $this->requestData['page'] < $this->document->getCurrentDocument()->numPages) {
-            $this->images[1] = $this->getImage($this->requestData['page'] + 1);
-            $this->fulltexts[1] = $this->getFulltext($this->requestData['page'] + 1);
-            $this->annotationContainers[1] = $this->getAnnotationContainers($this->requestData['page'] + 1);
+        $this->images[0] = $this->getImage($page);
+        $this->fulltexts[0] = $this->getFulltext($page);
+        $this->annotationContainers[0] = $this->getAnnotationContainers($page);
+        if ($this->requestData['double'] && $page < $this->document->getCurrentDocument()->numPages) {
+            $this->images[1] = $this->getImage($page + 1);
+            $this->fulltexts[1] = $this->getFulltext($page + 1);
+            $this->annotationContainers[1] = $this->getAnnotationContainers($page + 1);
         }
 
-        $this->scores = $this->getScore($this->requestData['page']);
-        $this->measures = $this->getMeasures($this->requestData['page']);
+        $this->scores = $this->getScore($page);
+        $this->measures = $this->getMeasures($page);
 
         // Get the controls for the map.
         $this->controls = explode(',', $this->settings['features']);
@@ -140,20 +144,21 @@ class PageViewController extends AbstractController
 
         $this->addViewerJS();
 
-        $this->view->assign('docCount', count($this->documentArray));
+        $this->view->assign('docCount', is_array($this->documentArray) ? count($this->documentArray) : 0);
         $this->view->assign('docArray', $this->documentArray);
-        $this->view->assign('docPage', $this->requestData['docPage']);
+        $this->view->assign('docPage', $this->requestData['docPage'] ?? null);
         $this->view->assign('docType', $this->document->getCurrentDocument()->tableOfContents[0]['type']);
 
-        $this->view->assign('multiview', $this->requestData['multiview']);
-        if ($this->requestData['multiview']) {
+        $this->view->assign('multiview', $this->requestData['multiview'] ?? null);
+        if ($this->requestData['multiview'] ?? false) {
             $this->multipageNavigation();
         }
 
         $this->view->assign('images', $this->images);
         $this->view->assign('docId', $this->requestData['id']);
-        $this->view->assign('page', $this->requestData['page']);
+        $this->view->assign('page', $page);
 
+        return $this->htmlResponse();
     }
 
     /**
@@ -271,13 +276,13 @@ class PageViewController extends AbstractController
 
     /**
      * Action to add multiple mets sources (multi page view)
-     * @return void
+     * @return ResponseInterface the response
      */
-    public function addDocumentAction(FormAddDocument $formAddDocument)
+    public function addDocumentAction(FormAddDocument $formAddDocument): ResponseInterface
     {
         if (GeneralUtility::isValidUrl($formAddDocument->getLocation())) {
             $nextMultipleSourceKey = 0;
-            if ($this->requestData['multipleSource']) {
+            if (isset($this->requestData['multipleSource']) && is_array($this->requestData['multipleSource'])) {
                 $nextMultipleSourceKey = max(array_keys($this->requestData['multipleSource'])) + 1;
             }
             $params = array_merge(
@@ -291,9 +296,10 @@ class PageViewController extends AbstractController
                 ->setArgumentPrefix('tx_dlf')
                 ->uriFor('main');
 
-            $this->redirectToUri($uri);
+            return $this->redirectToUri($uri);
         }
 
+        return $this->htmlResponse();
     }
 
     /**
@@ -413,7 +419,7 @@ class PageViewController extends AbstractController
         }
 
         if (empty($score)) {
-            $this->logger->notice('No score file found for page "' . $page . '" in fileGrps "' . $this->settings['fileGrpScore'] . '"');
+            $this->logger->notice('No score file found for page "' . $page . '" in fileGrps "' . ($this->extConf['files']['fileGrpScore'] ?? '') . '"');
         }
         return $score;
     }
@@ -462,7 +468,7 @@ class PageViewController extends AbstractController
      */
     protected function addViewerJS(): void
     {
-        if (count($this->documentArray) > 1) {
+        if (is_array($this->documentArray) && count($this->documentArray) > 1) {
             $jsViewer = 'tx_dlf_viewer = [];';
             $i = 0;
             foreach ($this->documentArray as $document) {
@@ -523,17 +529,17 @@ class PageViewController extends AbstractController
                 });';
         } else {
             $currentMeasureId = '';
-            $docPage = $this->requestData['page'];
+            $docPage = $this->requestData['page'] ?? 0;
 
             $docMeasures = $this->getMeasures($docPage);
-            if ($this->requestData['measure']) {
+            if ($this->requestData['measure'] ?? false) {
                 $currentMeasureId = $docMeasures['measureCounterToMeasureId'][$this->requestData['measure']];
             }
 
             $viewer = [
                 'controls' => $this->controls,
                 'div' => $this->settings['elementId'],
-                'progressElementId' => $this->settings['progressElementId'],
+                'progressElementId' => $this->settings['progressElementId'] ?? 'tx-dlf-page-progress',
                 'images' => $this->images,
                 'fulltexts' => $this->fulltexts,
                 'score' => $this->scores,
@@ -617,7 +623,6 @@ class PageViewController extends AbstractController
      * @access protected
      *
      * @param int $page Page number
-     *
      * @param ?MetsDocument $specificDoc
      *
      * @return array URL and MIME type of image file
@@ -627,50 +632,61 @@ class PageViewController extends AbstractController
         $image = [];
         // Get @USE value of METS fileGrp.
         $fileGrpsImages = GeneralUtility::trimExplode(',', $this->extConf['files']['fileGrpImages']);
-        while ($fileGrpImages = array_pop($fileGrpsImages)) {
-            if ($specificDoc) {
-                // Get image link.
-                $physicalStructureInfo = $specificDoc->physicalStructureInfo[$specificDoc->physicalStructure[$page]];
-                $files = $physicalStructureInfo['files'];
-                if (!empty($files[$fileGrpImages])) {
-                    $file = $specificDoc->getFileInfo($files[$fileGrpImages]);
-                    $image['url'] = $file['location'];
-                    $image['mimetype'] = $file['mimeType'];
 
-                    // Only deliver static images via the internal PageViewProxy.
-                    // (For IIP and IIIF, the viewer needs to build and access a separate metadata URL, see `getMetadataURL` in `OLSources.js`.)
-                    if ($this->settings['useInternalProxy'] && !str_contains(strtolower($image['mimetype']), 'application')) {
-                        $this->configureProxyUrl($image['url']);
-                    }
-                    break;
-                } else {
-                    $this->logger->notice('No image file found for page "' . $page . '" in fileGrp "' . $fileGrpImages . '"');
+        foreach ($fileGrpsImages as $fileGrpImages) {
+            // Get file info for the specific page and file group
+            $file = $this->fetchFileInfo($page, $fileGrpImages, $specificDoc);
+            if ($file && Helper::filterFilesByMimeType($file, ['image', 'application'], ['IIIF', 'IIP', 'ZOOMIFY'], 'mimeType')) {
+                $image['url'] = $file['location'];
+                $image['mimetype'] = $file['mimeType'];
+
+                // Only deliver static images via the internal PageViewProxy.
+                // (For IIP and IIIF, the viewer needs to build and access a separate metadata URL, see `getMetadataURL` in `OLSources.js`.)
+                if ($this->settings['useInternalProxy'] && !Helper::filterFilesByMimeType($file, ['application'], ['IIIF', 'IIP', 'ZOOMIFY'], 'mimeType')) {
+                    $this->configureProxyUrl($image['url']);
                 }
-
+                break;
             } else {
-
-                // Get image link.
-                $physicalStructureInfo = $this->document->getCurrentDocument()->physicalStructureInfo[$this->document->getCurrentDocument()->physicalStructure[$page]];
-                $files = $physicalStructureInfo['files'];
-                if (!empty($files[$fileGrpImages])) {
-                    $file = $this->document->getCurrentDocument()->getFileInfo($files[$fileGrpImages]);
-                    $image['url'] = $file['location'];
-                    $image['mimetype'] = $file['mimeType'];
-
-                    // Only deliver static images via the internal PageViewProxy.
-                    // (For IIP and IIIF, the viewer needs to build and access a separate metadata URL, see `getMetadataURL` in `OLSources.js`.)
-                    if ($this->settings['useInternalProxy'] && !str_contains(strtolower($image['mimetype']), 'application')) {
-                        $this->configureProxyUrl($image['url']);
-                    }
-                    break;
-                } else {
-                    $this->logger->notice('No image file found for page "' . $page . '" in fileGrp "' . $fileGrpImages . '"');
-                }
+                $this->logger->notice('No image file found for page "' . $page . '" in fileGrp "' . $fileGrpImages . '"');
             }
         }
+
         if (empty($image)) {
             $this->logger->warning('No image file found for page "' . $page . '" in fileGrps "' . $this->extConf['files']['fileGrpImages'] . '"');
         }
+
         return $image;
+    }
+
+    /**
+     * Fetch file info for a specific page and file group.
+     *
+     * @param int $page Page number
+     * @param string $fileGrpImages File group
+     * @param ?MetsDocument $specificDoc Optional specific document
+     *
+     * @return array|null File info array or null if not found
+     */
+    private function fetchFileInfo(int $page, string $fileGrpImages, ?MetsDocument $specificDoc): ?array
+    {
+        // Get the physical structure info for the specified page
+        if ($specificDoc) {
+            $physicalStructureInfo = $specificDoc->physicalStructureInfo[$specificDoc->physicalStructure[$page]];
+        } else {
+            $physicalStructureInfo = $this->document->getCurrentDocument()->physicalStructureInfo[$this->document->getCurrentDocument()->physicalStructure[$page]];
+        }
+
+        // Get the files for the specified file group
+        $files = $physicalStructureInfo['files'] ?? null;
+        if ($files && !empty($files[$fileGrpImages])) {
+            // Get the file info for the specified file group
+            if ($specificDoc) {
+                return $specificDoc->getFileInfo($files[$fileGrpImages]);
+            } else {
+                return $this->document->getCurrentDocument()->getFileInfo($files[$fileGrpImages]);
+            }
+        }
+
+        return null;
     }
 }

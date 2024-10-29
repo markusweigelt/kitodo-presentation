@@ -17,6 +17,7 @@ use Kitodo\Dlf\Common\IiifManifest;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\StructureRepository;
+use Psr\Http\Message\ResponseInterface;
 use Ubl\Iiif\Context\IRI;
 
 /**
@@ -98,15 +99,15 @@ class MetadataController extends AbstractController
     /**
      * @access public
      *
-     * @return void
+     * @return ResponseInterface the response
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return;
+            return $this->htmlResponse();
         }
 
         $this->setPage();
@@ -131,11 +132,13 @@ class MetadataController extends AbstractController
 
         if (empty(array_filter($metadata))) {
             $this->logger->warning('No metadata found for document with UID ' . $this->document->getUid());
-            return;
+            return $this->htmlResponse();
         }
         ksort($metadata);
 
         $this->printMetadata($metadata);
+
+        return $this->htmlResponse();
     }
 
     /**
@@ -307,7 +310,7 @@ class MetadataController extends AbstractController
 
         foreach ($metadata as $i => $section) {
             if ($this->settings['linkTitle'] && $section['_id'] && isset($section['title']) && !empty($section['title'])) {
-                $details = $this->currentDocument->getLogicalStructure($section['_id']);
+                $details = $this->currentDocument->getLogicalStructure($section['_id'][0]);
                 $buildUrl[$i]['title'] = [
                     'id' => $this->document->getUid(),
                     'page' => (!empty($details['points']) ? (int) $details['points'] : 1),
@@ -475,11 +478,13 @@ class MetadataController extends AbstractController
         if ($this->settings['rootline'] < 2) {
             // Get current structure's @ID.
             $ids = [];
-            $page = $this->currentDocument->physicalStructure[$this->requestData['page']];
-            if (!empty($page) && !empty($this->currentDocument->smLinks['p2l'][$page])) {
-                foreach ($this->currentDocument->smLinks['p2l'][$page] as $logId) {
-                    $count = $this->currentDocument->getStructureDepth($logId);
-                    $ids[$count][] = $logId;
+            if (isset($this->requestData['page'])) {
+                $page = $this->currentDocument->physicalStructure[$this->requestData['page']];
+                if (!empty($page) && !empty($this->currentDocument->smLinks['p2l'][$page])) {
+                    foreach ($this->currentDocument->smLinks['p2l'][$page] as $logId) {
+                        $count = $this->currentDocument->getStructureDepth($logId);
+                        $ids[$count][] = $logId;
+                    }
                 }
             }
             ksort($ids);

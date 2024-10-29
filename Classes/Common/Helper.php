@@ -14,8 +14,10 @@ namespace Kitodo\Dlf\Common;
 
 use TYPO3\CMS\Core\Configuration\ConfigurationManager;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\Uri;
+use TYPO3\CMS\Core\Http\ApplicationType;
 use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Context\Context;
@@ -23,6 +25,7 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
 use TYPO3\CMS\Core\Messaging\FlashMessageQueue;
+use TYPO3\CMS\Core\Resource\MimeTypeCollection;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
@@ -583,7 +586,7 @@ class Helper
         $context = GeneralUtility::makeInstance(Context::class);
 
         if (
-            \TYPO3_MODE === 'BE'
+            ApplicationType::fromRequest($GLOBALS['TYPO3_REQUEST'])->isBackend()
             && $context->getPropertyFromAspect('backend.user', 'isAdmin')
         ) {
             // Instantiate TYPO3 core engine.
@@ -622,7 +625,7 @@ class Helper
      * Fetches and renders all available flash messages from the queue.
      *
      * @access public
-     * 
+     *
      * @static
      *
      * @param string $queue The queue's unique identifier
@@ -783,8 +786,7 @@ class Helper
      */
     public static function whereExpression(string $table, bool $showHidden = false): string
     {
-        // TODO: Check with applicationType; TYPO3_MODE is removed in v12
-        if (\TYPO3_MODE === 'FE') {
+        if (!Environment::isCli() && ApplicationType::fromRequest($GLOBALS['TYPO3_REQUEST'])->isFrontend()) {
             // Should we ignore the record's hidden flag?
             $ignoreHide = 0;
             if ($showHidden) {
@@ -799,14 +801,13 @@ class Helper
             } else {
                 return '';
             }
-            // TODO: Check with applicationType; TYPO3_MODE is removed in v12
-        } elseif (\TYPO3_MODE === 'BE') {
+        } elseif (Environment::isCli() || ApplicationType::fromRequest($GLOBALS['TYPO3_REQUEST'])->isBackend()) {
             return GeneralUtility::makeInstance(ConnectionPool::class)
                 ->getQueryBuilderForTable($table)
                 ->expr()
                 ->eq($table . '.' . $GLOBALS['TCA'][$table]['ctrl']['delete'], 0);
         } else {
-            self::log('Unexpected TYPO3_MODE', LOG_SEVERITY_ERROR);
+            self::log('Unexpected application type (neither frontend or backend)', LOG_SEVERITY_ERROR);
             return '1=-1';
         }
     }
@@ -927,7 +928,7 @@ class Helper
      * @access private
      *
      * @static
-     * 
+     *
      * @param string $path
      *
      * @return mixed
@@ -941,5 +942,50 @@ class Helper
         }
 
         return ArrayUtility::getValueByPath($GLOBALS['TYPO3_CONF_VARS'], $path);
+    }
+
+    /**
+     * Filters a file based on its mimetype categories.
+     *
+     * This method checks if the provided file array contains a specified mimetype key and
+     * verifies if the mimetype belongs to any of the specified categories or matches any of the additional custom mimetypes.
+     *
+     * @param mixed $file The file array to filter
+     * @param array $categories The MIME type categories to filter by (e.g., ['audio'], ['video'] or ['image', 'application'])
+     * @param array $dlfMimeTypes The custom DLF mimetype keys IIIF, IIP or ZOOMIFY to check against (default is an empty array)
+     * @param string $mimeTypeKey The key used to access the mimetype in the file array (default is 'mimetype')
+     *
+     * @return bool True if the file mimetype belongs to any of the specified categories or matches any custom mimetypes, false otherwise
+     */
+    public static function filterFilesByMimeType($file, array $categories, array $dlfMimeTypes = [], string $mimeTypeKey = 'mimetype'): bool
+    {
+        // Retrieves MIME types from the TYPO3 Core MimeTypeCollection
+        $mimeTypeCollection = GeneralUtility::makeInstance(MimeTypeCollection::class);
+        $mimeTypes = array_filter(
+            $mimeTypeCollection->getMimeTypes(),
+            function ($mimeType) use ($categories) {
+                foreach ($categories as $category) {
+                    if (strpos($mimeType, $category . '/') === 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        );
+
+        // Custom dlf MIME types
+        $dlfMimeTypeArray = [
+            'IIIF' => 'application/vnd.kitodo.iiif',
+            'IIP' => 'application/vnd.netfpx',
+            'ZOOMIFY' => 'application/vnd.kitodo.zoomify'
+        ];
+
+        // Filter custom MIME types based on provided keys
+        $filteredDlfMimeTypes = array_intersect_key($dlfMimeTypeArray, array_flip($dlfMimeTypes));
+
+        if (is_array($file) && isset($file[$mimeTypeKey])) {
+            return in_array($file[$mimeTypeKey], $mimeTypes) || in_array($file[$mimeTypeKey], $filteredDlfMimeTypes);
+        }
+        return false;
     }
 }

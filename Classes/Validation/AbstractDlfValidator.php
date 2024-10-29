@@ -15,10 +15,10 @@ declare(strict_types=1);
 namespace Kitodo\Dlf\Validation;
 
 use InvalidArgumentException;
-use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Error\Result;
 use TYPO3\CMS\Extbase\Validation\Validator\AbstractValidator;
 
 /**
@@ -40,12 +40,11 @@ abstract class AbstractDlfValidator extends AbstractValidator
      */
     public function __construct(string $valueClassName)
     {
-        parent::__construct();
         $this->logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(static::class);
         $this->valueClassName = $valueClassName;
     }
 
-    public function validate($value)
+    public function validate($value): Result
     {
         if (!$value instanceof $this->valueClassName) {
             $this->logger->debug('Value must be an instance of ' . $this->valueClassName . '.');
