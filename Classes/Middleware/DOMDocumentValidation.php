@@ -22,8 +22,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Http\ResponseFactory;
 use TYPO3\CMS\Core\Log\LogManager;
+use TYPO3\CMS\Core\TypoScript\TypoScriptService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Error\Result;
 
 /**
@@ -66,11 +66,8 @@ class DOMDocumentValidation implements MiddlewareInterface
             throw new InvalidArgumentException('URL parameter is missing.', 1724334674);
         }
 
-        /** @var ConfigurationManagerInterface $configurationManager */
-        $configurationManager = GeneralUtility::makeInstance(ConfigurationManagerInterface::class);
-        $settings = $configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS);
-
-        if (!array_key_exists("domDocumentValidationValidators", $settings)) {
+        $settings = $this->getSettings();
+        if (!isset($settings) || !array_key_exists("domDocumentValidationValidators", $settings)) {
             $this->logger->error('DOMDocumentValidation is not configured correctly.');
             throw new InvalidArgumentException('DOMDocumentValidation is not configured correctly.', 1724335601);
         }
@@ -112,5 +109,23 @@ class DOMDocumentValidation implements MiddlewareInterface
             ->withHeader('Content-Type', 'application/json; charset=utf-8');
         $response->getBody()->write(json_encode($resultContent));
         return $response;
+    }
+
+    /**
+     * Get the tx_dlf plugin settings from TypoScript.
+     *
+     * @return array|null
+     */
+    public function getSettings(): ?array
+    {
+        $typoScriptService = GeneralUtility::makeInstance(TypoScriptService::class);
+        $typoScript = $GLOBALS['TSFE']->tmpl->setup;
+        $pluginTypoScript = $typoScriptService->convertTypoScriptArrayToPlainArray(
+            $typoScript['plugin.']['tx_dlf.'] ?? []
+        );
+        if (array_key_exists('settings', $pluginTypoScript)) {
+            return $pluginTypoScript['settings'];
+        }
+        return null;
     }
 }
