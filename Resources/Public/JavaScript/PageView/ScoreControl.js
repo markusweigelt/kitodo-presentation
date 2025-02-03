@@ -258,11 +258,10 @@ const dlfViewerScoreControl = function (dlfViewer, pagebeginning, pagecount) {
 };
 
 function getPdfTitle(tk) {
-    var parser = new DOMParser();
-    var xmlDoc = parser.parseFromString(tk.getMEI(), "text/xml");
-    var work = xmlDoc.getElementsByTagName("work");
-    var pdfTitle = work[0].getElementsByTagName("title")[0].textContent;
-    return pdfTitle;
+  let parser = new DOMParser();
+  let xmlDoc = parser.parseFromString(tk.getMEI(), "text/xml");
+  let meiHead = xmlDoc.getElementsByTagName("meiHead");
+  return meiHead[0].getElementsByTagName("title")[0].textContent;
 }
 
 /**
