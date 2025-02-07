@@ -46,7 +46,7 @@
  * @param {DlfViewerConfig} settings
  * @constructor
  */
-var dlfViewer = function (settings) {
+var dlfViewer = function(settings){
 
     /**
      * The element id of the map container
@@ -338,6 +338,8 @@ dlfViewer.prototype.countPages = function () {
 /**
  * Methods inits and binds the custom controls to the dlfViewer. Right now that are the
  * fulltext, score, and the image manipulation control
+ *
+ * @param {Array.<string>} controlNames
  */
 dlfViewer.prototype.addCustomControls = function() {
     var fulltextControl = undefined,
@@ -619,13 +621,13 @@ dlfViewer.prototype.addCustomControls = function() {
     //
     if ($('#tx-dlf-tools-imagetools').length > 0) {
 
-        // Should be called if CORS is enabled
+        // should be called if cors is enabled
         imageManipulationControl = new dlfViewerImageManipulationControl({
             controlTarget: $('.tx-dlf-tools-imagetools')[0],
             map: this.map,
         });
 
-        // Bind behavior of both together
+        // bind behavior of both together
         if (fulltextControl !== undefined) {
             $(imageManipulationControl).on("activate-imagemanipulation", $.proxy(fulltextControl.deactivate, fulltextControl));
             $(fulltextControl).on("activate-fulltext", $.proxy(imageManipulationControl.deactivate, imageManipulationControl));
@@ -635,7 +637,7 @@ dlfViewer.prototype.addCustomControls = function() {
             $(annotationControl).on("activate-annotations", $.proxy(imageManipulationControl.deactivate, imageManipulationControl));
         }
 
-        // Set on object scope
+        // set on object scope
         this.imageManipulationControl = imageManipulationControl;
 
     }
@@ -650,7 +652,7 @@ dlfViewer.prototype.addCustomControls = function() {
  * @param {number} width
  * @param {number} height
  *
- * @returns void
+ * @return void
  */
 dlfViewer.prototype.addHighlightField = function(highlightField, imageIndex, width, height) {
 
@@ -671,7 +673,7 @@ dlfViewer.prototype.addHighlightField = function(highlightField, imageIndex, wid
  * Creates OpenLayers controls
  * @param {Array.<string>} controlNames
  * @param {Array.<ol.layer.Layer>} layers
- * @returns {Array.<ol.control.Control>}
+ * @return {Array.<ol.control.Control>}
  * @private
  */
 dlfViewer.prototype.createControls_ = function(controlNames, layers) {
@@ -695,7 +697,7 @@ dlfViewer.prototype.createControls_ = function(controlNames, layers) {
  *
  * @param {string} controlName
  * @param {Array.<ol.layer.Layer>} layers
- * @returns {ol.control.Control | null}
+ * @return {ol.control.Control | null}
  * @protected
  */
 dlfViewer.prototype.createControl = function(controlName, layers) {
@@ -708,7 +710,7 @@ dlfViewer.prototype.createControl = function(controlName, layers) {
 
             var ovExtent = ol.extent.buffer(
                 extent,
-                Number(Math.max(ol.extent.getWidth(extent), ol.extent.getHeight(extent)))
+                1 * Math.max(ol.extent.getWidth(extent), ol.extent.getHeight(extent))
             );
 
             return new ol.control.OverviewMap({
@@ -922,7 +924,7 @@ dlfViewer.prototype.updateLayerSize = function() {
  * Generate the OpenLayers layer objects for given image sources. Returns a promise / jQuery deferred object.
  *
  * @param {ImageDesc[]} imageSourceObjs
- * @returns {jQuery.Deferred.<function(Array.<ol.layer.Layer>)>}
+ * @return {jQuery.Deferred.<function(Array.<ol.layer.Layer>)>}
  * @private
  */
 dlfViewer.prototype.initLayer = function(imageSourceObjs) {

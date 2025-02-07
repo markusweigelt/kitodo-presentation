@@ -307,14 +307,14 @@ abstract class AbstractController extends ActionController implements LoggerAwar
         // $this->requestData['page'] may be integer or string (physical structure @ID)
         if (
             (int) $this->requestData['page'] > 0
-            || empty($this->requestData['page'])
-            || is_array($this->requestData['docPage'])
+            || empty($this->requestData['page']
+            || is_array($this->requestData['docPage']))
         ) {
             if (isset($this->settings['multiViewType']) && $this->document->getCurrentDocument()->tableOfContents[0]['type'] === $this->settings['multiViewType']) {
                 $i = 0;
                 foreach ($this->documentArray as $document) {
                     if ($document !== null) {
-                        $this->requestData['docPage'][$i] = MathUtility::forceIntegerInRange((int) $this->requestData['docPage'][$i], 1, $document->numPages, 1);
+                        $this->requestData['docPage'][$i] = MathUtility::forceIntegerInRange((int)$this->requestData['docPage'][$i], 1, $document->numPages, 1);
                         $i++;
                     }
                 }
@@ -521,13 +521,14 @@ abstract class AbstractController extends ActionController implements LoggerAwar
         }
 
         if ($doc !== null) {
-            $this->document = GeneralUtility::makeInstance(Document::class);
-
             if ($doc->recordId) {
                 // find document from repository by recordId
                 $docFromRepository = $this->documentRepository->findOneByRecordId($doc->recordId);
                 if ($docFromRepository !== null) {
                     $this->document = $docFromRepository;
+                } else {
+                    // create new dummy Document object
+                    $this->document = GeneralUtility::makeInstance(Document::class);
                 }
             }
 

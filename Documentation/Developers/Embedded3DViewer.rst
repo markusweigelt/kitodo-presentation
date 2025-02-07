@@ -1,8 +1,10 @@
 ========
-3D Viewer
+Embedded 3D Viewer
 ========
 
-On this page, you will find all the information to use the 3D Viewer in Kitodo.Presentation. The `model-viewer <https://modelviewer.dev>`_ is installed as the build-in standard viewer and supports ‘glTF/GLB 3D models’ as the model file format. Alternatively you can use one or multiple custom viewer implementations or our reference implementations from the GitHub repository `slub/dlf-3d-viewers <https://github.com/slub/dlf-3d-viewers>`_.
+The `model-viewer <https://modelviewer.dev>`_ is installed as the built-in standard viewer and supports ‘glTF/GLB 3D models’ as the model file format.
+Alternatively you can use one or multiple custom viewer implementations or our reference implementations from the GitHub repository `slub/dlf-3d-viewers <https://github.com/slub/dlf-3d-viewers>`_.
+On this page, you will find all the information needed to configure and embed any 3D Viewer implementation for Kitodo.Presentation.
 
 .. contents::
     :local:
@@ -18,22 +20,22 @@ Setup
 .. IMPORTANT::
    When creating folders through the Filelist module in TYPO3, follow the usual process. However, when creating folders in the system, ensure that the name is URL-compliant.
 
+.. _Embedded 3D Viewer Configuration:
+
 Configuration
 =======
 
 By default, the viewers from the folder ``dlf_3d_viewers`` are all active and can be accessed and tested via URL.
 
-For this, only the parameter ``tx_dlf[viewer]`` with the name of the viewer and the encoded URL to the model via the parameter ``tx_dlf[model]`` need to be passed to the URL that the plugin ``plugin.tx_dlf_view3d`` renders.
+For this, only the parameter ``tx_dlf[viewer]`` with the name of the viewer and the encoded URL to the model via the parameter ``tx_dlf[model]`` need to be passed to the URL under which the plugin ``plugin.tx_dlf_embedded3dViewer`` is rendered.
 
 .. note::
    For example in the DFG Viewer, this is the page whose ID is set via the constant ``config.kitodoPageView``.
 
-.. _Automatic selection of the viewer:
-
 Automatic selection of the viewer
 -------
 
-Under the configuration of the ``dlf`` extension, you will find a tab to configure 3D viewers for automatic selection.
+Under the configuration of the ``dlf`` extension, you will find a tab to configure embedded 3D viewer implementation for automatic selection of 3D viewer.
 
 With the configuration field "Viewer model format mapping," you can define a list of considered viewers from the ``dlf_3d_viewers`` folder along with their associated model formats.
 If there are multiple viewers that support the same model format, you can decide here which one is responsible for the specific format.
@@ -95,8 +97,8 @@ Placeholders can be used within the file which is define under the ``base`` key 
      :description:              The fileserver where your resource is hosted. For example "https://example.com/my-model.glb".
 
    - :field:                    modelPath
-     :description:              Part of the ``modelUrl`` where your resource is hosted. For example, if your resource ist hosted at "https://example.com/my-model.glb", the value would be "https://example.com/static/models/".
+     :description:              Part of the ``modelUrl`` where your resource is hosted. For example, if your resource is hosted at "https://example.com/my-model.glb", the value would be "https://example.com/static/models/".
 
    - :field:                    modelResource
-     :description:              Resource part of the ``modelUrl`` with the filename to be loaded from the endpoint. For example, if your resource ist hosted at "https://example.com/my-model.glb", the value would be "my-model.glb".
+     :description:              Resource part of the ``modelUrl`` with the filename to be loaded from the endpoint. For example, if your resource is hosted at "https://example.com/my-model.glb", the value would be "my-model.glb".
 

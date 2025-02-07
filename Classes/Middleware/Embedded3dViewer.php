@@ -16,10 +16,14 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Configuration\Loader\YamlFileLoader;
+use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Exception;
 use TYPO3\CMS\Core\Http\HtmlResponse;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\StorageRepository;
@@ -34,7 +38,7 @@ use TYPO3\CMS\Frontend\Controller\ErrorController;
  * @subpackage dlf
  * @access public
  */
-class Embedded3DViewer implements MiddlewareInterface
+class Embedded3dViewer implements LoggerAwareInterface, MiddlewareInterface
 {
     use LoggerAwareTrait;
 
@@ -58,9 +62,11 @@ class Embedded3DViewer implements MiddlewareInterface
         // parameters are sent by POST --> use getParsedBody() instead of getQueryParams()
         $parameters = $request->getQueryParams();
         // Return if not this middleware
-        if (!isset($parameters['middleware']) || ($parameters['middleware'] != 'dlf/embedded3DViewer')) {
+        if (!isset($parameters['middleware']) || ($parameters['middleware'] != 'dlf/embedded3dviewer')) {
             return $response;
         }
+
+        $this->logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
 
         if (empty($parameters['model'])) {
             return $this->warningResponse('Model url is missing.', $request);
@@ -160,21 +166,24 @@ class Embedded3DViewer implements MiddlewareInterface
      * @param $modelFormat string The model format
      * @return string The 3D viewer
      */
-    private function getViewerByExtensionConfiguration($modelFormat): string
+    private function getViewerByExtensionConfiguration(string $modelFormat): string
     {
-        $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::EXT_KEY, '3dviewer');
-        $viewerModelFormatMappings = explode(";", $extConf['viewerModelFormatMapping']);
-        foreach ($viewerModelFormatMappings as $viewerModelFormatMapping) {
-            $explodedViewerModelMapping = explode(":", $viewerModelFormatMapping);
-            if (count($explodedViewerModelMapping) == 2) {
-                $viewer = trim($explodedViewerModelMapping[0]);
-                $viewerModelFormats = array_map('trim', explode(",", $explodedViewerModelMapping[1]));
-                if (in_array($modelFormat, $viewerModelFormats)) {
-                    return $viewer;
+        try {
+            $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::EXT_KEY, '3dviewer');
+            $viewerModelFormatMappings = explode(";", $extConf['viewerModelFormatMapping']);
+            foreach ($viewerModelFormatMappings as $viewerModelFormatMapping) {
+                $explodedViewerModelMapping = explode(":", $viewerModelFormatMapping);
+                if (count($explodedViewerModelMapping) == 2) {
+                    $viewer = trim($explodedViewerModelMapping[0]);
+                    $viewerModelFormats = array_map('trim', explode(",", $explodedViewerModelMapping[1]));
+                    if (in_array($modelFormat, $viewerModelFormats)) {
+                        return $viewer;
+                    }
                 }
             }
+        } catch (Exception $exception) {
+            $this->logger->debug($exception->getMessage());
         }
-
         return $extConf['defaultViewer'] ?? "";
     }
 
@@ -202,8 +211,8 @@ class Embedded3DViewer implements MiddlewareInterface
     {
         /** @var ResourceFactory $resourceFactory */
         $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class);
-        $html = $resourceFactory->retrieveFileOrFolderObject('EXT:dlf/Resources/Private/Templates/View3D/Standalone.html')->getContents();
-        $file = $resourceFactory->retrieveFileOrFolderObject('EXT:dlf/Resources/Public/JavaScript/3DViewer/model-viewer-3.5.0.min.js');
+        $html = $resourceFactory->retrieveFileOrFolderObject('EXT:dlf/Resources/Public/Html/Embedded3dViewerStandalone.html')->getContents();
+        $file = $resourceFactory->retrieveFileOrFolderObject('EXT:dlf/Resources/Public/JavaScript/Embedded3dViewer/model-viewer-3.5.0.min.js');
         $html = str_replace('{{modelViewerJS}}', $file->getPublicUrl(), $html);
         $html = str_replace("{{modelUrl}}", $model, $html);
         return new HtmlResponse($html);

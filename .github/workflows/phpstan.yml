@@ -2,9 +2,9 @@ name: PHPStan
 
 on:
     push:
-      branches: [ "master" ]
+      branches: [ "main" ]
     pull_request:
-      branches: [ "master" ]
+      branches: [ "main" ]
 
 jobs:
   phpstan:
@@ -18,9 +18,9 @@ jobs:
         uses: php-actions/composer@v6
         with:
           command: update
-          php_version: "7.4"
 
       - name: PHPStan Static Analysis
         uses: php-actions/phpstan@v3
         with:
           configuration: ./.github/phpstan.neon
+          path: ''

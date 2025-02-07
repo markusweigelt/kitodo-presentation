@@ -73,7 +73,7 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
      * @var DocumentRepository
      */
     protected $documentRepository;
-
+    
     /**
      * @param DocumentRepository $documentRepository
      */
@@ -98,8 +98,10 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
         $configurationManager = $objectManager->get(ConfigurationManager::class);
         $this->injectConfigurationManager($configurationManager);
         $frameworkConfiguration = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK);
+
         $frameworkConfiguration['persistence']['storagePid'] = MathUtility::forceIntegerInRange((int) $storagePid, 0);
         $this->configurationManager->setConfiguration($frameworkConfiguration);
+
         $this->documentRepository = GeneralUtility::makeInstance(DocumentRepository::class);
     }
 
@@ -134,7 +136,7 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
 
                 // Load document with current plugin parameters.
                 $this->loadDocument($queryParams['tx_dlf'], $cPid);
-                if (!isset($this->document) || $this->document->getCurrentDocument() === null) {
+                if ($this->document === null || $this->document->getCurrentDocument() === null) {
                     return $type;
                 }
                 // Set PID for metadata definitions.
@@ -169,7 +171,9 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
     {
         // Try to get document format from database
         if (!empty($requestData['id'])) {
+
             $this->initializeRepositories($pid);
+
             $doc = null;
             if (MathUtility::canBeInterpretedAsInteger($requestData['id'])) {
                 // find document from repository by uid
@@ -179,26 +183,34 @@ class DocumentTypeFunctionProvider implements ExpressionFunctionProviderInterfac
                 } else {
                     $this->logger->error('Invalid UID "' . $requestData['id'] . '" or PID "' . $pid . '" for document loading');
                 }
-            } elseif (GeneralUtility::isValidUrl($requestData['id'])) {
+            } else if (GeneralUtility::isValidUrl($requestData['id'])) {
+
                 $doc = AbstractDocument::getInstance($requestData['id'], ['storagePid' => $pid], true);
+
                 if ($doc !== null) {
                     if ($doc->recordId) {
                         $this->document = $this->documentRepository->findOneByRecordId($doc->recordId);
                     }
-                    if (!isset($this->document)) {
+
+                    if ($this->document === null) {
                         // create new dummy Document object
                         $this->document = GeneralUtility::makeInstance(Document::class);
                     }
+
                     $this->document->setLocation($requestData['id']);
                 } else {
                     $this->logger->error('Invalid location given "' . $requestData['id'] . '" for document loading');
                 }
             }
+
             if ($this->document !== null && $doc !== null) {
                 $this->document->setCurrentDocument($doc);
             }
+
         } elseif (!empty($requestData['recordId'])) {
+
             $this->document = $this->documentRepository->findOneByRecordId($requestData['recordId']);
+
             if ($this->document !== null) {
                 $doc = AbstractDocument::getInstance($this->document->getLocation(), ['storagePid' => $pid], true);
                 if ($doc !== null) {

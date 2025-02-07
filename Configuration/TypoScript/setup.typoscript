@@ -18,7 +18,6 @@ config {
 
 page {
   includeCSS {
-    3dviewer = EXT:dlf/Resources/Public/Stylesheets/3d-viewer.css
     jPlayer = EXT:dlf/Resources/Public/JavaScript/jPlayer/blue.monday/css/jplayer.blue.monday.min.css
     openLayers = EXT:dlf/Resources/Public/JavaScript/OpenLayers/openlayers.css
   }
@@ -75,7 +74,7 @@ page {
 page.includeJSFooter {
     # Gridstack
     gridstack = EXT:dlf/Resources/Public/JavaScript/Gridstack/gridstack-all.js
-    gridstack-init = EXT:dlf/Resources/Public/JavaScript/PageView/Gridstack.js
+    gridstack-init = EXT:dlf/Resources/Public/JavaScript/PageView/gridstack.js
 }
 [end]
 
