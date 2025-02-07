@@ -317,13 +317,13 @@ function runConversion() {
     $.fn.midiPlayer = function (options) {
 
         var options = $.extend({
-            // These are the defaults.
-            color: "#556b2f",
-            backgroundColor: "white",
-            width: 500,
-            onStop: null,
-            onUpdate: null,
-            updateRate: 50,
+              // These are the defaults.
+              color: "#556b2f",
+              backgroundColor: "white",
+              width: 500,
+              onStop: null,
+              onUpdate: null,
+              updateRate: 50,
         },
         options);
         // width should not be less than 150
@@ -334,15 +334,15 @@ function runConversion() {
         $.fn.midiPlayer.play = function (song) {
             if (midiPlayer_isLoaded == false) {
                 midiPlayer_input = song;
-            }
-            else {
+            } else {
                 var byteArray = convertDataURIToBinary(song);
                 if (midiPlayer_totalSamples > 0) {
                     stop();
                     // a timeout is necessary because otherwise writing to the disk is not done
-                    setTimeout(function() {convertFile("player.midi", byteArray);}, 200);
-                }
-                else {
+                    setTimeout(function () {
+                        convertFile("player.midi", byteArray);
+                    }, 200);
+                } else {
                     convertFile("player.midi", byteArray);
                 }
             }
@@ -362,11 +362,11 @@ function runConversion() {
         // Create the player
         this.append("<div id=\"midiPlayer_div\"></div>");
         $("#midiPlayer_div").append("<div id=\"midiPlayer_playingTime\">0:00</div>")
-            .append("<div id=\"midiPlayer_bar\"><div id=\"midiPlayer_progress\"></div></div>")
-            .append("<div id=\"midiPlayer_totalTime\">0:00</div>")
-            .append("<a class=\"icon play\" id=\"midiPlayer_play\" onclick=\"play()\"></a>")
-            .append("<a class=\"icon pause\" id=\"midiPlayer_pause\" onclick=\"pause()\"></a>")
-            .append("<a class=\"icon stop\" id=\"midiPlayer_stop\" onclick=\"stop()\"></a>");
+          .append("<div id=\"midiPlayer_bar\"><div id=\"midiPlayer_progress\"></div></div>")
+          .append("<div id=\"midiPlayer_totalTime\">0:00</div>")
+          .append("<a class=\"icon play\" id=\"midiPlayer_play\" onclick=\"play()\"></a>")
+          .append("<a class=\"icon pause\" id=\"midiPlayer_pause\" onclick=\"pause()\"></a>")
+          .append("<a class=\"icon stop\" id=\"midiPlayer_stop\" onclick=\"stop()\"></a>");
 
         $("#midiPlayer_div").css("width", options.width + 200);
         $("#midiPlayer_bar").css("width", options.width);
@@ -386,12 +386,14 @@ function runConversion() {
 
         var pageDragStart = 0;
         var barDragStart = 0;
-        midiPlayer_bar.addEventListener('mousedown', function (e) {
-            if (midiPlayer_totalSamples == 0) return;
-            pageDragStart = e.pageX;
-            barDragStart = e.offsetX;
-            updateDragging(e.pageX);
-        });
+        if (midiPlayer_bar) {
+            midiPlayer_bar.addEventListener('mousedown', function (e) {
+                if (midiPlayer_totalSamples == 0) return;
+                pageDragStart = e.pageX;
+                barDragStart = e.offsetX;
+                updateDragging(e.pageX);
+            });
+        }
         window.addEventListener('mousemove', function (e) {
             if (pageDragStart != 0) {
                 pause();
