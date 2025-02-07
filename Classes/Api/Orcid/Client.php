@@ -94,8 +94,7 @@ class Client
      *
      * @return void
      */
-    public function setEndpoint(string $endpoint): void
-    {
+    public function setEndpoint(string $endpoint): void {
         $this->endpoint = $endpoint;
     }
 

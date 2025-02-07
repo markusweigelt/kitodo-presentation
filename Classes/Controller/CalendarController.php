@@ -15,7 +15,6 @@ namespace Kitodo\Dlf\Controller;
 use Generator;
 use Kitodo\Dlf\Domain\Model\Document;
 use Kitodo\Dlf\Domain\Repository\StructureRepository;
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Extbase\Persistence\QueryResultInterface;
 
 /**
@@ -57,9 +56,9 @@ class CalendarController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // Set initial document (anchor or year file) if configured.
         if (empty($this->requestData['id']) && !empty($this->settings['initialDocument'])) {
@@ -70,28 +69,27 @@ class CalendarController extends AbstractController
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
         }
 
         $metadata = $this->document->getCurrentDocument()->getToplevelMetadata();
         if (!empty($metadata['type'][0])) {
             $type = $metadata['type'][0];
         } else {
-            return $this->htmlResponse();
+            return;
         }
 
         switch ($type) {
             case 'newspaper':
             case 'ephemera':
-                return $this->redirect('years', null, null, $this->requestData);
+                $this->forward('years', null, null, $this->requestData);
             case 'year':
-                return $this->redirect('calendar', null, null, $this->requestData);
+                $this->forward('calendar', null, null, $this->requestData);
             case 'issue':
             default:
                 break;
         }
 
-        return $this->htmlResponse();
     }
 
     /**
@@ -99,9 +97,9 @@ class CalendarController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function calendarAction(): ResponseInterface
+    public function calendarAction(): void
     {
         // access arguments passed by the mainAction()
         $mainRequestData = $this->request->getArguments();
@@ -113,7 +111,7 @@ class CalendarController extends AbstractController
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
         }
 
         $calendarData = $this->buildCalendar();
@@ -138,8 +136,6 @@ class CalendarController extends AbstractController
         $this->view->assign('yearLinkTitle', $yearLinkTitle);
         $this->view->assign('parentDocumentId', $this->document->getPartof() ?: $this->document->getCurrentDocument()->tableOfContents[0]['points']);
         $this->view->assign('allYearDocTitle', $this->document->getCurrentDocument()->getTitle($this->document->getPartof()) ?: $this->document->getCurrentDocument()->tableOfContents[0]['label']);
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -147,9 +143,9 @@ class CalendarController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function yearsAction(): ResponseInterface
+    public function yearsAction(): void
     {
         // access arguments passed by the mainAction()
         $mainRequestData = $this->request->getArguments();
@@ -161,7 +157,7 @@ class CalendarController extends AbstractController
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
         }
 
         // Get all children of anchor. This should be the year anchor documents
@@ -225,8 +221,6 @@ class CalendarController extends AbstractController
 
         $this->view->assign('documentId', $this->document->getUid());
         $this->view->assign('allYearDocTitle', $this->document->getCurrentDocument()->getTitle((int) $this->document->getUid()) ?: $this->document->getCurrentDocument()->tableOfContents[0]['label']);
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -286,7 +280,7 @@ class CalendarController extends AbstractController
                         $dayLinksText = [];
                         $dayLinkDiv = [];
                         $currentMonth = date('n', $currentDayTime);
-                        if (array_key_exists($currentMonth, $calendarIssuesByMonth) && is_array($calendarIssuesByMonth[$currentMonth])) {
+                        if (is_array($calendarIssuesByMonth[$currentMonth])) {
                             foreach ($calendarIssuesByMonth[$currentMonth] as $id => $day) {
                                 if ($id == date('j', $currentDayTime)) {
                                     $dayLinks = $id;
@@ -492,21 +486,19 @@ class CalendarController extends AbstractController
         $toc = $this->document->getCurrentDocument()->tableOfContents;
 
         foreach ($toc[0]['children'] as $year) {
-            if (array_key_exists('children', $year)) {
-                foreach ($year['children'] as $month) {
-                    foreach ($month['children'] as $day) {
-                        foreach ($day['children'] as $issue) {
-                            $title = $issue['label'] ?: $issue['orderlabel'];
-                            if (strtotime($title) !== false) {
-                                $title = strftime('%x', strtotime($title));
-                            }
-
-                            yield [
-                                'uid' => $issue['points'],
-                                'title' => $title,
-                                'year' => $day['orderlabel'],
-                            ];
+            foreach ($year['children'] as $month) {
+                foreach ($month['children'] as $day) {
+                    foreach ($day['children'] as $issue) {
+                        $title = $issue['label'] ?: $issue['orderlabel'];
+                        if (strtotime($title) !== false) {
+                            $title = strftime('%x', strtotime($title));
                         }
+
+                        yield [
+                            'uid' => $issue['points'],
+                            'title' => $title,
+                            'year' => $day['orderlabel'],
+                        ];
                     }
                 }
             }

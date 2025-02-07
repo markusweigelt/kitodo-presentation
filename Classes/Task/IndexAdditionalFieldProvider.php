@@ -44,14 +44,12 @@ class IndexAdditionalFieldProvider extends BaseAdditionalFieldProvider
             $taskInfo['pid'] = $task->getPid();
             $taskInfo['solr'] = $task->getSolr();
             $taskInfo['owner'] = $task->getOwner();
-            $taskInfo['softCommit'] = $task->isSoftCommit();
         } else {
             $taskInfo['dryRun'] = false;
             $taskInfo['doc'] = 'https://';
             $taskInfo['pid'] = - 1;
             $taskInfo['solr'] = - 1;
             $taskInfo['owner'] = '';
-            $taskInfo['softCommit'] = false;
         }
 
         $additionalFields = [];
@@ -78,9 +76,6 @@ class IndexAdditionalFieldProvider extends BaseAdditionalFieldProvider
 
         // Text field for owner
         $additionalFields['owner'] = $this->getOwnerField($taskInfo['owner']);
-
-        // Checkbox for soft commit
-        $additionalFields['softCommit'] = $this->getSoftCommitField($taskInfo['softCommit']);
 
         return $additionalFields;
     }

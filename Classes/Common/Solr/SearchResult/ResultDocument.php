@@ -230,7 +230,7 @@ class ResultDocument
      *
      * @access public
      *
-     * @return Page[] All result's pages which contain search phrase
+     * @return array(Page) All result's pages which contain search phrase
      */
     public function getPages(): array
     {
@@ -242,7 +242,7 @@ class ResultDocument
      *
      * @access public
      *
-     * @return Region[] All result's regions which contain search phrase
+     * @return array(Region) All result's regions which contain search phrase
      */
     public function getRegions(): array
     {
@@ -254,7 +254,7 @@ class ResultDocument
      *
      * @access public
      *
-     * @return Highlight[] All result's highlights of search phrase
+     * @return array(Highlight) All result's highlights of search phrase
      */
     public function getHighlights(): array
     {
@@ -266,7 +266,7 @@ class ResultDocument
      *
      * @access public
      *
-     * @return string[] All result's highlights of search phrase
+     * @return array(string) All result's highlights of search phrase
      */
     public function getHighlightsIds(): array
     {

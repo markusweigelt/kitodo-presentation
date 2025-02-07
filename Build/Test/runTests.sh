@@ -3,16 +3,16 @@
 # Adopted/reduced from https://github.com/TYPO3/typo3/blob/f6d73fea5a8f3a5cd8537e29308f18bec65a0c92/Build/Scripts/runTests.sh
 
 # Function to write a .env file in Build/Test
-# This is read by docker compose and vars defined here are
+# This is read by docker-compose and vars defined here are
 # used in Build/Test/docker-compose.yml
 setUpDockerComposeDotEnv() {
     # Delete possibly existing local .env file if exists
     [ -e .env ] && rm .env
-    # Set up a new .env file for docker compose
+    # Set up a new .env file for docker-compose
     {
         echo "COMPOSE_PROJECT_NAME=dlf_testing"
         # To prevent access rights of files created by the testing, the docker image later
-        # runs with the same user that is currently executing the script. docker compose can't
+        # runs with the same user that is currently executing the script. docker-compose can't
         # use $UID directly itself since it is a shell variable and not an env variable, so
         # we have to set it explicitly here.
         echo "HOST_UID=$(id -u)"
@@ -61,11 +61,11 @@ Execute unit, functional and other test suites in a docker based test environmen
 execution of single test files, sending xdebug information to a local IDE and more.
 
 Recommended docker version is >=20.10 for xdebug break pointing to work reliably, and
-a recent docker compose (tested >=2.27.1) is needed.
+a recent docker-compose (tested >=1.21.2) is needed.
 
 Usage: $0 [options] [file]
 
-No arguments: Run all unit tests with PHP 8.1
+No arguments: Run all unit tests with PHP 7.4
 
 Options:
     -s <...>
@@ -74,12 +74,12 @@ Options:
             - functional: PHP functional tests
             - unit (default): PHP unit tests
 
-    -t <11.5|12.4>
+    -t <|10.4|11.5>
         Only with -s composerInstall
         Specifies which TYPO3 version to install. When unset, installs either the packages from
         composer.lock, or the latest version otherwise (default behavior of "composer install").
+            - 10.4
             - 11.5
-            - 12.4
 
     -a <mysqli|pdo_mysql>
         Only with -s functional
@@ -97,27 +97,34 @@ Options:
             - mariadb (default): use mariadb
             - mysql: use MySQL server
 
-    -i <10.2|10.3|10.4|10.5|10.6|10.11>
+    -i <10.1|10.2|10.3|10.4|10.5|10.6|10.7|10.8|10.9|10.10>
         Only with -d mariadb
         Specifies on which version of mariadb tests are performed
+            - 10.1
             - 10.2
             - 10.3 (default)
             - 10.4
             - 10.5
             - 10.6
-            - 10.11
+            - 10.7
+            - 10.8
+            - 10.9
+            - 10.10
 
-    -j <5.7|8.0>
+    -j <5.5|5.6|5.7|8.0>
         Only with -d mysql
         Specifies on which version of mysql tests are performed
+            - 5.5 (default)
+            - 5.6
             - 5.7
-            - 8.0 (default)
+            - 8.0
 
-    -p <8.1|8.2|8.3>
+    -p <7.4|8.0|8.1|8.2>
         Specifies the PHP minor version to be used
-            - 8.1: use PHP 8.1 (default)
-            - 8.2: use PHP 8.2
-            - 8.3: use PHP 8.3
+            - 7.4: (default) use PHP 7.4
+            - 8.0: use PHP 8.0
+            - 8.1: use PHP 8.1
+            - 8.2: use PHP 8.2 (note that xdebug is currently not available for PHP8.2)
 
     -e "<phpunit options>"
         Only with -s functional|functionalDeprecated|unit|unitDeprecated|unitRandom|acceptance
@@ -153,6 +160,12 @@ Options:
         Show this help.
 EOF
 
+# Test if docker-compose exists, else exit out with error
+if ! type "docker-compose" > /dev/null; then
+    echo "This script relies on docker and docker-compose. Please install" >&2
+    exit 1
+fi
+
 # Go to the directory this script is located, so everything else is relative
 # to this dir, no matter from where this script is called.
 THIS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
@@ -173,7 +186,7 @@ fi
 TEST_SUITE="unit"
 TYPO3_VERSION=""
 DBMS="mariadb"
-PHP_VERSION="8.1"
+PHP_VERSION="7.4"
 PHP_XDEBUG_ON=0
 PHP_XDEBUG_PORT=9003
 SERVER_PORT=8000
@@ -182,7 +195,7 @@ SCRIPT_VERBOSE=0
 PHPUNIT_WATCH=0
 DATABASE_DRIVER=""
 MARIADB_VERSION="10.3"
-MYSQL_VERSION="8.0"
+MYSQL_VERSION="5.5"
 
 # Option parsing
 # Reset in case getopts has been used previously in the shell
@@ -206,7 +219,7 @@ while getopts ":a:s:t:d:i:j:p:e:xy:whuv" OPT; do
             ;;
         i)
             MARIADB_VERSION=${OPTARG}
-            if ! [[ ${MARIADB_VERSION} =~ ^(10.3|10.4|10.5|10.6|10.11)$ ]]; then
+            if ! [[ ${MARIADB_VERSION} =~ ^(10.2|10.3|10.4|10.5|10.6|10.11)$ ]]; then
                 INVALID_OPTIONS+=("${OPTARG}")
             fi
             ;;
@@ -218,7 +231,7 @@ while getopts ":a:s:t:d:i:j:p:e:xy:whuv" OPT; do
             ;;
         p)
             PHP_VERSION=${OPTARG}
-            if ! [[ ${PHP_VERSION} =~ ^(8.1|8.2|8.3)$ ]]; then
+            if ! [[ ${PHP_VERSION} =~ ^(7.4|8.0|8.1|8.2|8.3)$ ]]; then
                 INVALID_OPTIONS+=("${OPTARG}")
             fi
             ;;
@@ -264,7 +277,7 @@ if [ ${#INVALID_OPTIONS[@]} -ne 0 ]; then
     exit 1
 fi
 
-# Move "8.x" to "php8x", the latter is the docker container name
+# Move "7.4" to "php74", the latter is the docker container name
 DOCKER_PHP_IMAGE=$(echo "php${PHP_VERSION}" | sed -e 's/\.//')
 
 # Set $1 to first mass argument, this is the optional test file or test directory to execute
@@ -279,9 +292,9 @@ fi
 case ${TEST_SUITE} in
     composerInstall)
         setUpDockerComposeDotEnv
-        docker compose run composer_install
+        docker-compose run composer_install
         SUITE_EXIT_CODE=$?
-        docker compose down
+        docker-compose down
         ;;
     functional)
         handleDbmsAndDriverOptions
@@ -289,7 +302,7 @@ case ${TEST_SUITE} in
         case ${DBMS} in
             mariadb|mysql)
                 echo "Using driver: ${DATABASE_DRIVER}"
-                docker compose run functional
+                docker-compose run functional
                 SUITE_EXIT_CODE=$?
                 ;;
             *)
@@ -298,13 +311,13 @@ case ${TEST_SUITE} in
                 echo "call \".Build/Test/runTests.sh -h\" to display help and valid options" >&2
                 exit 1
         esac
-        docker compose down
+        docker-compose down
         ;;
     unit)
         setUpDockerComposeDotEnv
-        docker compose run unit
+        docker-compose run unit
         SUITE_EXIT_CODE=$?
-        docker compose down
+        docker-compose down
         ;;
     update)
         # pull typo3/core-testing-*:latest versions of those ones that exist locally

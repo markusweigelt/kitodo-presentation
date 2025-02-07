@@ -13,7 +13,6 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Common\Helper;
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
@@ -39,9 +38,9 @@ class ToolboxController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // Load current document.
         $this->loadDocument();
@@ -54,8 +53,6 @@ class ToolboxController extends AbstractController
 
         $this->renderTools();
         $this->view->assign('viewData', $this->viewData);
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -93,10 +90,6 @@ class ToolboxController extends AbstractController
                     case 'imagemanipulationtool':
                         $this->renderToolByName('renderImageManipulationTool');
                         break;
-                    case 'tx_dlf_modeldownloadtool':
-                    case 'modeldownloadtool':
-                        $this->renderToolByName('renderModelDownloadTool');
-                        break;
                     case 'tx_dlf_pdfdownloadtool':
                     case 'pdfdownloadtool':
                         $this->renderToolByName('renderPdfDownloadTool');
@@ -128,26 +121,6 @@ class ToolboxController extends AbstractController
     {
         $this->$tool();
         $this->view->assign($tool, true);
-    }
-
-    /**
-     * Get image's URL and MIME type information's.
-     *
-     * @access private
-     *
-     * @param int $page Page number
-     *
-     * @return array Array of image information's.
-     */
-    private function getImage(int $page): array
-    {
-        // Get @USE value of METS fileGroup.
-        $image = $this->getFile($page, $this->useGroupsConfiguration->getImage());
-        if (isset($image['mimetype'])) {
-            $fileExtension = Helper::getFileExtensionsForMimeType($image['mimetype']);
-            $image['mimetypeLabel'] = !empty($fileExtension) ? ' (' . strtoupper($fileExtension[0]) . ')' : '';
-        }
-        return $image;
     }
 
     /**
@@ -188,7 +161,10 @@ class ToolboxController extends AbstractController
      */
     private function renderFulltextDownloadTool(): void
     {
-        if ($this->isDocOrFulltextMissingOrEmpty()) {
+        if (
+            $this->isDocMissingOrEmpty()
+            || empty($this->extConf['files']['fileGrpFulltext'])
+        ) {
             // Quit without doing anything if required variables are not set.
             return;
         }
@@ -209,7 +185,10 @@ class ToolboxController extends AbstractController
      */
     private function renderFulltextTool(): void
     {
-        if ($this->isDocOrFulltextMissingOrEmpty()) {
+        if (
+            $this->isDocMissingOrEmpty()
+            || empty($this->extConf['files']['fileGrpFulltext'])
+        ) {
             // Quit without doing anything if required variables are not set.
             return;
         }
@@ -233,7 +212,7 @@ class ToolboxController extends AbstractController
     {
         if (
             $this->isDocMissingOrEmpty()
-            || empty($this->useGroupsConfiguration->getScore())
+            || empty($this->extConf['files']['fileGrpScore'])
         ) {
             // Quit without doing anything if required variables are not set.
             return;
@@ -245,10 +224,10 @@ class ToolboxController extends AbstractController
             $currentPhysPage = $this->document->getCurrentDocument()->physicalStructure[1];
         }
 
-        $useGroups = $this->useGroupsConfiguration->getScore();
-        foreach ($useGroups as $useGroup) {
-            if ($this->document->getCurrentDocument()->physicalStructureInfo[$currentPhysPage]['files'][$useGroup]) {
-                $scoreFile = $this->document->getCurrentDocument()->physicalStructureInfo[$currentPhysPage]['files'][$useGroup];
+        $fileGrpsScores = GeneralUtility::trimExplode(',', $this->extConf['files']['fileGrpScore']);
+        foreach ($fileGrpsScores as $fileGrpScore) {
+            if ($this->document->getCurrentDocument()->physicalStructureInfo[$currentPhysPage]['files'][$fileGrpScore]) {
+                $scoreFile = $this->document->getCurrentDocument()->physicalStructureInfo[$currentPhysPage]['files'][$fileGrpScore];
             }
         }
         if (!empty($scoreFile)) {
@@ -260,6 +239,7 @@ class ToolboxController extends AbstractController
     }
 
     /**
+     * Renders the image download tool
      * Renders the image download tool (used in template)
      * @SuppressWarnings(PHPMD.UnusedPrivateMethod)
      *
@@ -271,59 +251,60 @@ class ToolboxController extends AbstractController
     {
         if (
             $this->isDocMissingOrEmpty()
-            || empty($this->useGroupsConfiguration->getImage())
+            || empty($this->settings['fileGrpsImageDownload'])
         ) {
             // Quit without doing anything if required variables are not set.
             return;
         }
 
         $this->setPage();
-        $page = $this->requestData['page'] ?? 0;
 
         $imageArray = [];
         // Get left or single page download.
-        $image = $this->getImage($page);
-        if (Helper::filterFilesByMimeType($image, ['image'])) {
-            $imageArray[0] = $image;
-        }
-
+        $imageArray[0] = $this->getImage($this->requestData['page']);
         if ($this->requestData['double'] == 1) {
-            $image = $this->getImage($page + 1);
-            if (Helper::filterFilesByMimeType($image, ['image'])) {
-                $imageArray[1] = $image;
-            }
+            $imageArray[1] = $this->getImage($this->requestData['page'] + 1);
         }
-
         $this->view->assign('imageDownload', $imageArray);
     }
 
     /**
-     * Get file's URL and MIME type
+     * Get image's URL and MIME type
      *
      * @access private
      *
      * @param int $page Page number
      *
-     * @return array Array of file information
+     * @return array Array of image links and image format information
      */
-    private function getFile(int $page, array $fileGrps): array
+    private function getImage(int $page): array
     {
-        $file = [];
-        $physicalStructureInfo = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$page]] ?? null;
+        $image = [];
+        // Get @USE value of METS fileGrp.
+        $fileGrps = GeneralUtility::trimExplode(',', $this->settings['fileGrpsImageDownload']);
         while ($fileGrp = @array_pop($fileGrps)) {
-            if (isset($physicalStructureInfo['files'][$fileGrp])) {
-                $fileId = $physicalStructureInfo['files'][$fileGrp];
-                if (!empty($fileId)) {
-                    $file['url'] = $this->currentDocument->getDownloadLocation($fileId);
-                    $file['mimetype'] = $this->currentDocument->getFileMimeType($fileId);
-                } else {
-                    $this->logger->warning('File not found in fileGrp "' . $fileGrp . '"');
+            // Get image link.
+            $physicalStructureInfo = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$page]];
+            $fileId = $physicalStructureInfo['files'][$fileGrp];
+            if (!empty($fileId)) {
+                $image['url'] = $this->currentDocument->getDownloadLocation($fileId);
+                $image['mimetype'] = $this->currentDocument->getFileMimeType($fileId);
+                switch ($image['mimetype']) {
+                    case 'image/jpeg':
+                        $image['mimetypeLabel']  = ' (JPG)';
+                        break;
+                    case 'image/tiff':
+                        $image['mimetypeLabel']  = ' (TIFF)';
+                        break;
+                    default:
+                        $image['mimetypeLabel']  = '';
                 }
+                break;
             } else {
-                $this->logger->warning('fileGrp "' . $fileGrp . '" not found in Document mets:fileSec');
+                $this->logger->warning('File not found in fileGrp "' . $fileGrp . '"');
             }
         }
-        return $file;
+        return $image;
     }
 
     /**
@@ -344,33 +325,6 @@ class ToolboxController extends AbstractController
     }
 
     /**
-     * Renders the model download tool
-     * Renders the model download tool (used in template)
-     * @SuppressWarnings(PHPMD.UnusedPrivateMethod)
-     *
-     * @access private
-     *
-     * @return void
-     */
-    private function renderModelDownloadTool(): void
-    {
-        // TODO: missing fileGrpsModelDownload, should be added to ext config as useGroupsModelDownload
-        if (
-            $this->isDocMissingOrEmpty()
-            || empty($this->settings['fileGrpsModelDownload'])
-        ) {
-            // Quit without doing anything if required variables are not set.
-            return;
-        }
-
-        $this->setPage();
-
-        if (isset($this->requestData['page'])) {
-            $this->view->assign('modelDownload', $this->getFile($this->requestData['page'], GeneralUtility::trimExplode(',', $this->settings['fileGrpsModelDownload'])));
-        }
-    }
-
-    /**
      * Renders the PDF download tool (used in template)
      * @SuppressWarnings(PHPMD.UnusedPrivateMethod)
      *
@@ -382,7 +336,7 @@ class ToolboxController extends AbstractController
     {
         if (
             $this->isDocMissingOrEmpty()
-            || empty($this->useGroupsConfiguration->getDownload())
+            || empty($this->extConf['files']['fileGrpDownload'])
         ) {
             // Quit without doing anything if required variables are not set.
             return;
@@ -408,15 +362,15 @@ class ToolboxController extends AbstractController
         $firstPageLink = '';
         $secondPageLink = '';
         $pageLinkArray = [];
-        $pageNumber = $this->requestData['page'] ?? 0;
-        $useGroups = $this->useGroupsConfiguration->getDownload();
+        $pageNumber = $this->requestData['page'];
+        $fileGrpsDownload = GeneralUtility::trimExplode(',', $this->extConf['files']['fileGrpDownload']);
         // Get image link.
-        while ($useGroup = array_shift($useGroups)) {
-            $firstFileGroupDownload = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$pageNumber]]['files'][$useGroup] ?? [];
+        while ($fileGrpDownload = array_shift($fileGrpsDownload)) {
+            $firstFileGroupDownload = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$pageNumber]]['files'][$fileGrpDownload];
             if (!empty($firstFileGroupDownload)) {
                 $firstPageLink = $this->currentDocument->getFileLocation($firstFileGroupDownload);
                 // Get second page, too, if double page view is activated.
-                $secondFileGroupDownload = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$pageNumber + 1]]['files'][$useGroup];
+                $secondFileGroupDownload = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$pageNumber + 1]]['files'][$fileGrpDownload];
                 if (
                     $this->requestData['double']
                     && $pageNumber < $this->currentDocument->numPages
@@ -431,7 +385,7 @@ class ToolboxController extends AbstractController
             empty($firstPageLink)
             && empty($secondPageLink)
         ) {
-            $this->logger->warning('File not found in fileGrps "' . $this->extConf['files']['useGroupsDownload'] . '"');
+            $this->logger->warning('File not found in fileGrps "' . $this->extConf['files']['fileGrpDownload'] . '"');
         }
 
         if (!empty($firstPageLink)) {
@@ -453,23 +407,23 @@ class ToolboxController extends AbstractController
     private function getWorkLink(): string
     {
         $workLink = '';
-        $useGroups = $this->useGroupsConfiguration->getDownload();
+        $fileGrpsDownload = GeneralUtility::trimExplode(',', $this->extConf['files']['fileGrpDownload']);
         // Get work link.
-        while ($useGroup = array_shift($useGroups)) {
-            $fileGroupDownload = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[0]]['files'][$useGroup] ?? [];
+        while ($fileGrpDownload = array_shift($fileGrpsDownload)) {
+            $fileGroupDownload = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[0]]['files'][$fileGrpDownload];
             if (!empty($fileGroupDownload)) {
                 $workLink = $this->currentDocument->getFileLocation($fileGroupDownload);
                 break;
             } else {
                 $details = $this->currentDocument->getLogicalStructure($this->currentDocument->toplevelId);
-                if (!empty($details['files'][$useGroup])) {
-                    $workLink = $this->currentDocument->getFileLocation($details['files'][$useGroup]);
+                if (!empty($details['files'][$fileGrpDownload])) {
+                    $workLink = $this->currentDocument->getFileLocation($details['files'][$fileGrpDownload]);
                     break;
                 }
             }
         }
         if (empty($workLink)) {
-            $this->logger->warning('File not found in fileGrps "' . $this->extConf['files']['useGroupsDownload'] . '"');
+            $this->logger->warning('File not found in fileGrps "' . $this->extConf['files']['fileGrpDownload'] . '"');
         }
         return $workLink;
     }
@@ -485,7 +439,8 @@ class ToolboxController extends AbstractController
     private function renderSearchInDocumentTool(): void
     {
         if (
-            $this->isDocOrFulltextMissingOrEmpty()
+            $this->isDocMissingOrEmpty()
+            || empty($this->extConf['files']['fileGrpFulltext'])
             || empty($this->settings['solrcore'])
         ) {
             // Quit without doing anything if required variables are not set.
@@ -508,7 +463,7 @@ class ToolboxController extends AbstractController
             'labelHighlightWord' => $this->settings['highlightWordInputName'],
             'labelEncrypted' => $this->settings['encryptedInputName'],
             'documentId' => $this->getCurrentDocumentId(),
-            'pageId' => $this->request->getAttribute('routing')->getPageId(),
+            'documentPageId' => $this->document->getPid(),
             'solrEncrypted' => $this->getEncryptedCoreName() ? : ''
         ];
 
@@ -580,13 +535,11 @@ class ToolboxController extends AbstractController
      */
     private function isFullTextEmpty(): bool
     {
-        $useGroups = $this->useGroupsConfiguration->getFulltext();
-        while ($useGroup = array_shift($useGroups)) {
-            if (isset($this->requestData['page'])) {
-                $files = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$this->requestData['page']]]['files'];
-                if (!empty($files[$useGroup])) {
-                    return false;
-                }
+        $fileGrpsFulltext = GeneralUtility::trimExplode(',', $this->extConf['files']['fileGrpFulltext']);
+        while ($fileGrpFulltext = array_shift($fileGrpsFulltext)) {
+            $files = $this->currentDocument->physicalStructureInfo[$this->currentDocument->physicalStructure[$this->requestData['page']]]['files'];
+            if (!empty($files[$fileGrpFulltext])) {
+                return false;
             }
         }
         return true;

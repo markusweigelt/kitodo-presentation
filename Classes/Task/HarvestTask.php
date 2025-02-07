@@ -43,9 +43,6 @@ class HarvestTask extends BaseTask
         if (!empty($this->set)) {
             $inputArray['--set'] = $this->set;
         }
-        if (!empty($this->softCommit)) {
-            $inputArray['--softCommit'] = true;
-        }
 
         $harvestCommand = GeneralUtility::makeInstance(\Kitodo\Dlf\Command\HarvestCommand::class);
         $inputInterface = GeneralUtility::makeInstance(\Symfony\Component\Console\Input\ArrayInput::class, $inputArray);

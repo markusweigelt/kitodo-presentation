@@ -17,7 +17,6 @@ use Kitodo\Dlf\Common\IiifManifest;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\StructureRepository;
-use Psr\Http\Message\ResponseInterface;
 use Ubl\Iiif\Context\IRI;
 
 /**
@@ -99,18 +98,24 @@ class MetadataController extends AbstractController
     /**
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
+        } else {
+            // Set default values if not set.
+            $this->setDefault('rootline', 0);
+            $this->setDefault('originalIiifMetadata', 0);
+            $this->setDefault('displayIiifDescription', 1);
+            $this->setDefault('displayIiifRights', 1);
+            $this->setDefault('displayIiifLinks', 1);
+            $this->setPage();
         }
-
-        $this->setPage();
 
         $this->currentDocument = $this->document->getCurrentDocument();
         $this->useOriginalIiifManifestMetadata = $this->settings['originalIiifMetadata'] == 1 && $this->currentDocument instanceof IiifManifest;
@@ -132,13 +137,11 @@ class MetadataController extends AbstractController
 
         if (empty(array_filter($metadata))) {
             $this->logger->warning('No metadata found for document with UID ' . $this->document->getUid());
-            return $this->htmlResponse();
+            return;
         }
         ksort($metadata);
 
         $this->printMetadata($metadata);
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -169,17 +172,15 @@ class MetadataController extends AbstractController
                     // NOTE: Labels are to be escaped in Fluid template
 
                     $metadata[$i][$name] = is_array($value)
-                        ? $value
-                        : explode($this->settings['separator'], $value);
+                        ? implode($this->settings['separator'], $value)
+                        : $value;
 
-                    // PHPStan error
-                    // I don't understand what this code does, so I take it away until author can fix it
-                    /*if ($metadata[$i][$name][0] === 'Array') {
+                    if ($metadata[$i][$name] === 'Array') {
                         $metadata[$i][$name] = [];
                         foreach ($value as $subKey => $subValue) {
                             $metadata[$i][$name][$subKey] = $subValue;
                         }
-                    }*/
+                    }
 
                     $this->parseMetadata($i, $name, $value, $metadata);
 
@@ -310,7 +311,7 @@ class MetadataController extends AbstractController
 
         foreach ($metadata as $i => $section) {
             if ($this->settings['linkTitle'] && $section['_id'] && isset($section['title']) && !empty($section['title'])) {
-                $details = $this->currentDocument->getLogicalStructure($section['_id'][0]);
+                $details = $this->currentDocument->getLogicalStructure($section['_id']);
                 $buildUrl[$i]['title'] = [
                     'id' => $this->document->getUid(),
                     'page' => (!empty($details['points']) ? (int) $details['points'] : 1),
@@ -478,13 +479,11 @@ class MetadataController extends AbstractController
         if ($this->settings['rootline'] < 2) {
             // Get current structure's @ID.
             $ids = [];
-            if (!empty($this->currentDocument->physicalStructure) && isset($this->requestData['page'])) {
-                $page = $this->currentDocument->physicalStructure[$this->requestData['page']];
-                if (!empty($page) && !empty($this->currentDocument->smLinks['p2l'][$page])) {
-                    foreach ($this->currentDocument->smLinks['p2l'][$page] as $logId) {
-                        $count = $this->currentDocument->getStructureDepth($logId);
-                        $ids[$count][] = $logId;
-                    }
+            $page = $this->currentDocument->physicalStructure[$this->requestData['page']];
+            if (!empty($page) && !empty($this->currentDocument->smLinks['p2l'][$page])) {
+                foreach ($this->currentDocument->smLinks['p2l'][$page] as $logId) {
+                    $count = $this->currentDocument->getStructureDepth($logId);
+                    $ids[$count][] = $logId;
                 }
             }
             ksort($ids);
@@ -529,5 +528,22 @@ class MetadataController extends AbstractController
             }
         }
         return $metadata;
+    }
+
+    /**
+     * Sets default value for setting if not yet set.
+     *
+     * @access private
+     *
+     * @param string $setting name of setting
+     * @param int $value 0 or 1
+     *
+     * @return void
+     */
+    private function setDefault(string $setting, int $value): void
+    {
+        if (!isset($this->settings[$setting])) {
+            $this->settings[$setting] = $value;
+        }
     }
 }

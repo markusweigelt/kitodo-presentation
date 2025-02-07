@@ -78,8 +78,7 @@ class Client
      *
      * @return void
      */
-    public function setEndpoint(string $endpoint): void
-    {
+    public function setEndpoint(string $endpoint): void {
         $this->endpoint = $endpoint;
     }
 
@@ -104,7 +103,7 @@ class Client
 
     /**
      * Creates the qualified API endpoint for retrieving the desired data
-     *
+     * 
      * @access private
      *
      * @return string

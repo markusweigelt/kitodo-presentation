@@ -19,9 +19,9 @@ use Symfony\Component\Yaml\Yaml;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
 use TYPO3\CMS\Extbase\Persistence\Generic\Typo3QuerySettings;
-use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
  * Base class for functional test cases. This provides some common configuration
@@ -29,11 +29,11 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  */
 class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\FunctionalTestCase
 {
-    protected array $testExtensionsToLoad = [
+    protected $testExtensionsToLoad = [
         'typo3conf/ext/dlf',
     ];
 
-    protected array $configurationToUseInTestInstance = [
+    protected $configurationToUseInTestInstance = [
         'SYS' => [
             'caching' => [
                 'cacheConfigurations' => [
@@ -75,6 +75,11 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
     protected $disableJsonWrappedResponse = false;
 
     /**
+     * @var ObjectManager
+     */
+    protected $objectManager;
+
+    /**
      * @var PersistenceManager
      */
     protected $persistenceManager;
@@ -106,6 +111,7 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
     {
         parent::setUp();
 
+        $this->objectManager = GeneralUtility::makeInstance(ObjectManager::class);
         $this->persistenceManager = GeneralUtility::makeInstance(PersistenceManager::class);
 
         $this->baseUrl = 'http://web:8000/public/typo3temp/var/tests/functional-' . $this->identifier . '/';
@@ -119,7 +125,7 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
 
     protected function getDlfConfiguration()
     {
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../Build/Test/', 'test.env');
+        $dotenv = Dotenv::createImmutable('/home/runner/work/kitodo-presentation/kitodo-presentation/Build/Test/', 'test.env');
         $dotenv->load();
 
         return [
@@ -128,11 +134,11 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
                 'requiredMetadataFields' => 'document_format'
             ],
             'files' => [
-                'useGroupsImage' => 'DEFAULT,MAX',
-                'useGroupsThumbnail' => 'THUMBS',
-                'useGroupsDownload' => 'DOWNLOAD',
-                'useGroupsFulltext' => 'FULLTEXT',
-                'useGroupsAudio' => 'AUDIO'
+                'fileGrpImages' => 'DEFAULT,MAX',
+                'fileGrpThumbs' => 'THUMBS',
+                'fileGrpDownload' => 'DOWNLOAD',
+                'fileGrpFulltext' => 'FULLTEXT',
+                'fileGrpAudio' => 'AUDIO'
             ],
             'solr' => [
                 'host' => getenv('dlfTestingSolrHost'),
@@ -176,16 +182,13 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
         $siteConfigPath = $this->instancePath . '/typo3conf/sites/' . $identifier;
         @mkdir($siteConfigPath, 0775, true);
         file_put_contents($siteConfigPath . '/config.yaml', Yaml::dump($siteConfig));
-
-        // refresh site cache (otherwise site config is not found)
-        $finder = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Site\SiteFinder::class);
-        $finder->getAllSites(false); // useCache = false
     }
 
     protected function initializeRepository(string $className, int $storagePid)
     {
-        $repository = GeneralUtility::makeInstance($className);
-        $querySettings = GeneralUtility::makeInstance(Typo3QuerySettings::class);
+        $repository = $this->objectManager->get($className);
+
+        $querySettings = $this->objectManager->get(Typo3QuerySettings::class);
         $querySettings->setStoragePageIds([$storagePid]);
         $repository->setDefaultQuerySettings($querySettings);
 
@@ -214,11 +217,7 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
 
     protected function initLanguageService(string $locale)
     {
-        // create mock backend user and set language
-        // which is loaded by LanguageServiceFactory as default value in backend mode
-        $backendUser = GeneralUtility::makeInstance(BackendUserAuthentication::class);
-        $backendUser->user["lang"] = $locale;
-        $GLOBALS['BE_USER'] = $backendUser;
+        $GLOBALS['LANG'] = GeneralUtility::makeInstance(LanguageServiceFactory::class)->create($locale);
     }
 
     /**

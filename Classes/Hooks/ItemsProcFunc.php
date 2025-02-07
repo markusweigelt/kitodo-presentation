@@ -20,6 +20,7 @@ use TYPO3\CMS\Core\Configuration\ConfigurationManager;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\TypoScript\TemplateService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 /**
  * Helper for FlexForm's custom "itemsProcFunc"
@@ -68,18 +69,19 @@ class ItemsProcFunc implements LoggerAwareInterface
      */
     public function getTyposcriptConfigFromPluginSiteRoot(array $params): void
     {
+        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
         $pid = $params['flexParentDatabaseRow']['pid'];
         $rootLine = BackendUtility::BEgetRootLine($pid);
         $siteRootRow = [];
         foreach ($rootLine as $row) {
-            if (isset($row['is_siteroot'])) {
+            if ($row['is_siteroot'] == '1') {
                 $siteRootRow = $row;
                 break;
             }
         }
 
         try {
-            $ts = GeneralUtility::makeInstance(TemplateService::class);
+            $ts = $objectManager->get(TemplateService::class, [$siteRootRow['uid']]);
             $ts->rootLine = $rootLine;
             $ts->runThroughTemplates($rootLine, 0);
             $ts->generateConfig();

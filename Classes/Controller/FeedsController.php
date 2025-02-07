@@ -13,7 +13,6 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Domain\Repository\LibraryRepository;
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -51,7 +50,7 @@ class FeedsController extends AbstractController
      */
     public function initializeAction(): void
     {
-        $this->request = $this->request->withFormat("xml");
+        $this->request->setFormat('xml');
     }
 
     /**
@@ -59,9 +58,9 @@ class FeedsController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // access to GET parameter tx_dlf_feeds['collection']
         $requestData = $this->request->getArguments();
@@ -85,7 +84,7 @@ class FeedsController extends AbstractController
             || GeneralUtility::inList($this->settings['collections'], $requestData['collection'])
         ) {
 
-            $documents = $this->documentRepository->findAllByCollectionsLimited(GeneralUtility::intExplode(',', $requestData['collection'] ?? "", true), $this->settings['limit']);
+            $documents = $this->documentRepository->findAllByCollectionsLimited(GeneralUtility::intExplode(',', $requestData['collection'], true), $this->settings['limit']);
 
             foreach ($documents as $document) {
 
@@ -124,7 +123,5 @@ class FeedsController extends AbstractController
 
         $this->view->assign('documents', $documents);
         $this->view->assign('feedMeta', $feedMeta);
-
-        return $this->htmlResponse();
     }
 }

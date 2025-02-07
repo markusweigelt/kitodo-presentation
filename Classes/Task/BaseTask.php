@@ -92,24 +92,6 @@ class BaseTask extends AbstractTask
      */
     protected string $set = '';
 
-    /**
-     * @access protected
-     * @var bool
-     */
-    protected bool $softCommit = false;
-
-    /**
-     * @access protected
-     * @var bool
-     */
-    protected bool $commit = false;
-
-    /**
-     * @access protected
-     * @var bool
-     */
-    protected bool $optimize = false;
-
     public function execute()
     {
         return true;
@@ -314,64 +296,11 @@ class BaseTask extends AbstractTask
     }
 
     /**
-     *
-     * @return bool
-     */
-    public function isSoftCommit(): bool
-    {
-        return $this->softCommit;
-    }
-
-    /**
-     *
-     * @param bool $softCommit
-     */
-    public function setSoftCommit(bool $softCommit): void
-    {
-        $this->softCommit = $softCommit;
-    }
-
-    /**
-     *
-     * @return bool
-     */
-    public function isCommit(): bool
-    {
-        return $this->commit;
-    }
-
-    /**
-     *
-     * @param bool $commit
-     */
-    public function setCommit(bool $commit): void
-    {
-        $this->commit = $commit;
-    }
-
-    /**
-     *
-     * @return bool
-     */
-    public function isOptimize(): bool
-    {
-        return $this->optimize;
-    }
-    /**
-     *
-     * @param bool $optimize
-     */
-    public function setOptimize(bool $optimize): void
-    {
-        $this->optimize = $optimize;
-    }
-
-    /**
-     * Generates and adds flash messages based on a string separated by PHP_EOL.
+     * Generates and adds flash messages based on a string seperated by PHP_EOL.
      *
      * @access protected
      *
-     * @param string $message Messages separated by PHP_EOL
+     * @param string $message Messages seperated by PHP_EOL
      * @param int $severity
      *
      * @return void

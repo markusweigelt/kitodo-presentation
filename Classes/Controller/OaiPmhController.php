@@ -11,14 +11,12 @@
 
 namespace Kitodo\Dlf\Controller;
 
-use DOMDocument;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use Kitodo\Dlf\Common\Solr\Solr;
 use Kitodo\Dlf\Domain\Model\Token;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
 use Kitodo\Dlf\Domain\Repository\LibraryRepository;
 use Kitodo\Dlf\Domain\Repository\TokenRepository;
-use Psr\Http\Message\ResponseInterface;
 
 /**
  * Controller class for the plugin 'OAI-PMH Interface'.
@@ -93,7 +91,7 @@ class OaiPmhController extends AbstractController
      */
     public function initializeAction()
     {
-        $this->request = $this->request->withFormat("xml");
+        $this->request->setFormat('xml');
     }
 
     /**
@@ -165,7 +163,6 @@ class OaiPmhController extends AbstractController
         $this->parameters = [];
         // Set only allowed parameters.
         foreach ($allowedParams as $param) {
-            // replace with $this->request->getQueryParams() when dropping support for Typo3 v11, see Deprecation-100596
             if (GeneralUtility::_GP($param)) {
                 $this->parameters[$param] = GeneralUtility::_GP($param);
             }
@@ -174,7 +171,7 @@ class OaiPmhController extends AbstractController
 
     /**
      * Get unqualified Dublin Core data.
-     * @see https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore
+     * @see http://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore
      *
      * @access private
      *
@@ -266,9 +263,9 @@ class OaiPmhController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction()
     {
         // Get allowed GET and POST variables.
         $this->getUrlParams();
@@ -276,7 +273,7 @@ class OaiPmhController extends AbstractController
         // Delete expired resumption tokens.
         $this->deleteExpiredTokens();
 
-        switch ($this->parameters['verb'] ?? null) {
+        switch ($this->parameters['verb']) {
             case 'GetRecord':
                 $this->verbGetRecord();
                 break;
@@ -303,19 +300,7 @@ class OaiPmhController extends AbstractController
         $this->view->assign('parameters', $this->parameters);
         $this->view->assign('error', $this->error);
 
-        // Generate the XML output.
-        $xmlOutput = $this->view->render();
-
-        // Format the XML.
-        $dom = new DOMDocument();
-        $dom->preserveWhiteSpace = false;
-        // Here we could also choose `false` for a minimized XML.
-        $dom->formatOutput = true;
-        $dom->loadXML($xmlOutput);
-        $formattedXmlOutput = trim($dom->saveXML());
-
-        // Return the formatted XML.
-        return $this->htmlResponse($formattedXmlOutput);
+        return;
     }
 
     /**
@@ -403,9 +388,13 @@ class OaiPmhController extends AbstractController
      */
     protected function verbIdentify()
     {
-        $library = $this->libraryRepository->findByUid($this->settings['library'] ?? 0);
+        $library = $this->libraryRepository->findByUid($this->settings['library']);
 
         $oaiIdentifyInfo = [];
+
+        if (!$oaiIdentifyInfo) {
+            $this->logger->notice('Incomplete plugin configuration');
+        }
 
         $oaiIdentifyInfo['oai_label'] = $library ? $library->getOaiLabel() : '';
         // Use default values for an installation with incomplete plugin configuration.
@@ -593,7 +582,7 @@ class OaiPmhController extends AbstractController
      */
     protected function verbListSets()
     {
-        // It is required to set oai_name inside the collection record to be shown in oai-pmh plugin.
+        // It is required to set a oai_name inside the collection record to be shown in oai-pmh plugin.
         $this->settings['hideEmptyOaiNames'] = true;
 
         $oaiSets = $this->collectionRepository->findCollectionsBySettings($this->settings);
@@ -651,18 +640,13 @@ class OaiPmhController extends AbstractController
 
         $solrQuery .= ' AND timestamp:[' . $from . ' TO ' . $until . ']';
 
-        $solrcore = $this->settings['solrcore'] ?? false;
-        if (!$solrcore) {
-            $this->logger->error('Solr core not configured');
-            return $documentSet;
-        }
-        $solr = Solr::getInstance($solrcore);
+        $solr = Solr::getInstance($this->settings['solrcore']);
         if (!$solr->ready) {
             $this->logger->error('Apache Solr not available');
             return $documentSet;
         }
-        if ($this->settings['solr_limit'] > 0) {
-            $solr->limit = $this->settings['solr_limit'];
+        if ((int) $this->settings['solr_limit'] > 0) {
+            $solr->limit = (int) $this->settings['solr_limit'];
         }
         // We only care about the UID in the results and want them sorted
         $parameters = [
@@ -801,13 +785,11 @@ class OaiPmhController extends AbstractController
      */
     protected function generateOutputForDocumentList(array $documentListSet)
     {
-        // check whether any result elements are available
-        if (empty($documentListSet) || empty($documentListSet['elements'])) {
+        $documentsToProcess = array_splice($documentListSet['elements'], 0, (int) $this->settings['limit']);
+        if (empty($documentsToProcess)) {
             $this->error = 'noRecordsMatch';
             return [];
         }
-        // consume result elements from list to implement pagination logic of resumptionToken
-        $documentsToProcess = array_splice($documentListSet['elements'], 0, $this->settings['limit']);
         $verb = $this->parameters['verb'];
 
         $documents = $this->documentRepository->getOaiDocumentList($documentsToProcess);
@@ -858,7 +840,7 @@ class OaiPmhController extends AbstractController
     protected function generateResumptionTokenForDocumentListSet(array $documentListSet, int $numShownDocuments)
     {
         // The cursor specifies how many elements have already been returned in previous requests
-        // See https://www.openarchives.org/OAI/openarchivesprotocol.html#FlowControl
+        // See http://www.openarchives.org/OAI/openarchivesprotocol.html#FlowControl
         $currentCursor = $documentListSet['metadata']['cursor'];
 
         if (count($documentListSet['elements']) !== 0) {

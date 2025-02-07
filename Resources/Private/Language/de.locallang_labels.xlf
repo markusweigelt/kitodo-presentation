@@ -569,10 +569,6 @@
 				<source>Image Manipulation</source>
 				<target>Bildbearbeitung</target>
 			</trans-unit>
-			<trans-unit id="tx_dlf_toolbox.modeldownloadtool">
-				<source>Model Download</source>
-				<target>Model-Download</target>
-			</trans-unit>
 			<trans-unit id="tx_dlf_toolbox.pdfdownloadtool">
 				<target>PDF-Download</target>
 				<source>PDF Download</source>
@@ -677,25 +673,25 @@
 				<target>Für die Indexierung von Dokumenten erforderliche Metadatenfelder</target>
 				<source>Metadata fields required for indexing documents</source>
 			</trans-unit>
-			<trans-unit id="config.files.useGroupsImage">
-				<target>Seiten Datei Nutzungsgruppen: Komma-getrennte Liste der @USE Attributwerte der Seitenansichten nach aufsteigender Größe sortiert (Standard ist "DEFAULT,MAX")</target>
-				<source>Page file use groups: comma-separated list of @USE attribute values ordered by increasing size (default is "DEFAULT,MAX")</source>
+			<trans-unit id="config.files.fileGrpImages">
+				<target>Seiten fileGrps: Komma-getrennte Liste der @USE Attributwerte der Seitenansichten nach aufsteigender Größe sortiert (Standard ist "DEFAULT,MAX")</target>
+				<source>Page fileGrps: comma-separated list of @USE attribute values ordered by increasing size (default is "DEFAULT,MAX")</source>
 			</trans-unit>
-			<trans-unit id="config.files.useGroupsThumbnail">
-				<target>Vorschau Datei Nutzungsgruppen: Komma-getrennte Liste der @USE Attributwerte der Vorschaubilder nach absteigender Priorität sortiert (Standard ist "THUMBS")</target>
-				<source>Thumbnail file use groups: comma-separated list of @USE attribute values ordered by decreasing priority (default is "THUMBS")</source>
+			<trans-unit id="config.files.fileGrpThumbs">
+				<target>Vorschau fileGrp: Komma-getrennte Liste der @USE Attributwerte der Vorschaubilder nach absteigender Priorität sortiert (Standard ist "THUMBS")</target>
+				<source>Thumbnail fileGrp: comma-separated list of @USE attribute values ordered by decreasing priority (default is "THUMBS")</source>
 			</trans-unit>
-			<trans-unit id="config.files.useGroupsDownload">
-				<target>Download Datei Nutzungsgruppen: Komma-getrennte Liste der @USE Attributwerte der Downloads nach absteigender Priorität sortiert (Standard ist "DOWNLOAD")</target>
-				<source>Download file use groups: comma-separated list of @USE attribute values ordered by decreasing priority (default is "DOWNLOAD")</source>
+			<trans-unit id="config.files.fileGrpDownload">
+				<target>Download fileGrp: Komma-getrennte Liste der @USE Attributwerte der Downloads nach absteigender Priorität sortiert (Standard ist "DOWNLOAD")</target>
+				<source>Download fileGrp: comma-separated list of @USE attribute values ordered by decreasing priority (default is "DOWNLOAD")</source>
 			</trans-unit>
-			<trans-unit id="config.files.useGroupsFulltext">
-				<target>Volltext Datei Nutzungsgruppen: Komma-getrennte Liste der @USE Attributwerte der Volltexte nach absteigender Priorität sortiert (Standard ist "FULLTEXT")</target>
-				<source>Fulltext file use groups: comma-separated list of @USE attribute values ordered by decreasing priority (default is "FULLTEXT")</source>
+			<trans-unit id="config.files.fileGrpFulltext">
+				<target>Volltext fileGrp: Komma-getrennte Liste der @USE Attributwerte der Volltexte nach absteigender Priorität sortiert (Standard ist "FULLTEXT")</target>
+				<source>Fulltext fileGrp: comma-separated list of @USE attribute values ordered by decreasing priority (default is "FULLTEXT")</source>
 			</trans-unit>
-			<trans-unit id="config.files.useGroupsAudio">
-				<target>Audio Datei Nutzungsgruppen: Komma-getrennte Liste der @USE Attributwerte der Audiodateien nach absteigender Priorität sortiert (Standard ist "AUDIO")</target>
-				<source>Audio file use groups: comma-separated list of @USE attribute values ordered by decreasing priority (default is "AUDIO")</source>
+			<trans-unit id="config.files.fileGrpAudio">
+				<target>Audio fileGrp: Komma-getrennte Liste der @USE Attributwerte der Audiodateien nach absteigender Priorität sortiert (Standard ist "AUDIO")</target>
+				<source>Audio fileGrp: comma-separated list of @USE attribute values ordered by decreasing priority (default is "AUDIO")</source>
 			</trans-unit>
 			<trans-unit id="config.iiif.indexAnnotations">
 				<target>IIIF-Annotationen mit Motivation "painting" als Volltext behandeln?: Als Volltext behandelte Annotationen werden im Suchid idiert (Standard ist "FALSE")</target>
@@ -850,16 +846,8 @@
 				<source>Solr Schema Field "geom" : GeoJSON geometry for spatial search (default is "geom")</source>
 			</trans-unit>
 			<trans-unit id="config.annotationServerUrl">
-				<target>Annotation-Server URL</target>
-				<source>Annotation Server URL</source>
-			</trans-unit>
-			<trans-unit id="config.embedded3dviewer.viewerModelFormatMapping">
-				<target>Viewer-Modellformat-Zuordnung: Fügen Sie eine durch Semikolons getrennte Liste unterstützter Viewer (aus dem "dlf_3d_viewers" Verzeichnis) hinzu. Nach jedem Viewer-Namen muss ein Doppelpunkt folgen, gefolgt von einer kommagetrennten Liste der Modellformate. (Beispiel: "dlf-model-viewer:glb;dlf-threejs:ply,obj;...")</target>
-				<source>Viewer model format mapping : Add a semicolon-separated list of supported viewers (from the "dlf_3d_viewers" directory). A colon must follow each viewer name, followed by a comma-separated list of model formats. (Example: "dlf-model-viewer:glb;dlf-threejs:ply,obj;...")</source>
-			</trans-unit>
-			<trans-unit id="config.embedded3dviewer.defaultViewer">
-				<target>Standard-Viewer : Überschreiben Sie den eingebauten Standard-Viewer mit einem der unterstützten Viewer (aus dem "dlf_3d_viewers" Verzeichnis), der als Fallback verwendet werden soll. (Der eingebaute Standard-Viewer ist der "model-viewer", der nur "glTF/GLB 3D-Modelle" als Modelldateiformat unterstützt.)</target>
-				<source>Default viewer : Overwrite the build-in default viewer with a supported viewer (from the "dlf_3d_viewers" directory) to be used as a fallback. (The built-in default viewer is the "model-viewer", which only supports "glTF/GLB 3D models" as the model file format.)</source>
+				<target>Annotation server url</target>
+				<source>Annotation server url</source>
 			</trans-unit>
 		</body>
 	</file>

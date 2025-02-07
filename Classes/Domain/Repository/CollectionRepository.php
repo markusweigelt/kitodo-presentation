@@ -12,7 +12,7 @@
 
 namespace Kitodo\Dlf\Domain\Repository;
 
-use Doctrine\DBAL\Result;
+use Doctrine\DBAL\ForwardCompatibility\Result;
 use Kitodo\Dlf\Common\Helper;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -57,8 +57,27 @@ class CollectionRepository extends Repository
         $constraints[] = $query->in('uid', $uids);
 
         if (count($constraints)) {
-            $query->matching($query->logicalAnd(...$constraints));
+            $query->matching($query->logicalAnd($constraints));
         }
+
+        return $query->execute();
+    }
+
+    /**
+     * Finds all collections
+     *
+     * @access public
+     *
+     * @param string $pages
+     *
+     * @return QueryResultInterface
+     */
+    public function getCollectionForMetadata(string $pages): QueryResultInterface
+    {
+        // Get list of collections to show.
+        $query = $this->createQuery();
+
+        $query->matching($query->equals('pid', $pages));
 
         return $query->execute();
     }
@@ -78,27 +97,27 @@ class CollectionRepository extends Repository
 
         $constraints = [];
 
-        if ($settings['collections'] ?? false) {
+        if ($settings['collections']) {
             $constraints[] = $query->in('uid', GeneralUtility::intExplode(',', $settings['collections']));
         }
 
-        if ($settings['index_name'] ?? false) {
+        if ($settings['index_name']) {
             $constraints[] = $query->in('index_name', $settings['index_name']);
         }
 
         // do not find user created collections (used by oai-pmh plugin)
-        if (!($settings['show_userdefined'] ?? false)) {
+        if (!$settings['show_userdefined']) {
             $constraints[] = $query->equals('fe_cruser_id', 0);
         }
 
         // do not find collections without oai_name set (used by oai-pmh plugin)
-        if ($settings['hideEmptyOaiNames'] ?? false) {
+        if ($settings['hideEmptyOaiNames']) {
             $constraints[] = $query->logicalNot($query->equals('oai_name', ''));
         }
 
         if (count($constraints)) {
             $query->matching(
-                $query->logicalAnd(...$constraints)
+                $query->logicalAnd($constraints)
             );
         }
 

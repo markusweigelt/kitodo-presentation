@@ -46,7 +46,7 @@ class SearchSuggest implements MiddlewareInterface
     {
         $response = $handler->handle($request);
         // Get input parameters and decrypt core name.
-        $parameters = $request->getParsedBody();
+        $parameters = $request->getQueryParams();
         // Return if not this middleware
         if (!isset($parameters['middleware']) || ($parameters['middleware'] != 'dlf/search-suggest')) {
             return $response;
@@ -61,15 +61,18 @@ class SearchSuggest implements MiddlewareInterface
         // Perform Solr query.
         $solr = Solr::getInstance($solrCore);
         if ($solr->ready) {
-            $query = $solr->service->createSuggester();
+            $query = $solr->service->createSelect();
+            $query->setHandler('suggest');
             $query->setQuery(Solr::escapeQuery((string) $parameters['q']));
-            $query->setCount(10);
-            $results = $solr->service->suggester($query);
-            foreach ($results as $termResult) {
-                foreach ($termResult as $termSuggestions) {
-                    $suggestions = $termSuggestions->getSuggestions();
-                    foreach ($suggestions as $suggestion) {
-                        $output[] = $suggestion['term'];
+            $query->setRows(0);
+            $results = $solr->service->select($query)->getResponse()->getBody();
+            $result = json_decode($results);
+            if (is_iterable($result->spellcheck->suggestions)) {
+                foreach ($result->spellcheck->suggestions as $suggestions) {
+                    if (is_object($suggestions)) {
+                        foreach ($suggestions->suggestion as $suggestion) {
+                            $output[] = $suggestion;
+                        }
                     }
                 }
             }

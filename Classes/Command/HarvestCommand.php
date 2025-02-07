@@ -88,12 +88,6 @@ class HarvestCommand extends BaseCommand
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'Name of the set to limit harvesting to.'
-            )
-            ->addOption(
-                'softCommit',
-                null,
-                InputOption::VALUE_NONE,
-                'If this option is set, documents are just added to the index by a soft commit.'
             );
     }
 
@@ -259,9 +253,9 @@ class HarvestCommand extends BaseCommand
                 }
                 $document->setCurrentDocument($doc);
                 // save to database
-                $this->saveToDatabase($document, $input->getOption('softCommit'));
+                $this->saveToDatabase($document);
                 // add to index
-                Indexer::add($document, $this->documentRepository, $input->getOption('softCommit'));
+                Indexer::add($document, $this->documentRepository);
             }
         }
 

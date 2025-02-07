@@ -3,7 +3,9 @@
 namespace Kitodo\Dlf\Common\Solr;
 
 use TYPO3\CMS\Extbase\Persistence\QueryInterface;
-use TYPO3\CMS\Extbase\Persistence\Generic\Query;
+use TYPO3\CMS\Extbase\Persistence\Generic\Qom\ConstraintInterface;
+use TYPO3\CMS\Extbase\Persistence\Generic\Qom\SourceInterface;
+use TYPO3\CMS\Extbase\Persistence\Generic\QuerySettingsInterface;
 
 /**
  * Targeted towards being used in ``PaginateController`` (``<f:widget.paginate>``).
@@ -16,7 +18,7 @@ use TYPO3\CMS\Extbase\Persistence\Generic\Query;
  * @property int $limit
  * @property int $offset
  */
-class SolrSearchQuery extends Query
+class SolrSearchQuery implements QueryInterface
 {
     /**
      * @access private
@@ -25,6 +27,18 @@ class SolrSearchQuery extends Query
     private SolrSearch $solrSearch;
 
     /**
+     * @access private
+     * @var int
+     */
+    private int $limit;
+
+    /**
+     * @access private
+     * @var int
+     */
+    private int $offset;
+
+     /**
      * Constructs SolrSearchQuery instance.
      *
      * @access public
@@ -40,6 +54,10 @@ class SolrSearchQuery extends Query
         $this->offset = 0;
         $this->limit = count($solrSearch);
     }
+
+    // this class contains a lot of methods which are inherited but not implemented
+    // @phpstan-ignore-next-line
+    public function getSource() {}
 
     /**
      * Executes SOLR search query.
@@ -64,6 +82,9 @@ class SolrSearchQuery extends Query
         }
         return $result;
     }
+
+    // @phpstan-ignore-next-line
+    public function setOrderings(array $orderings) {}
 
     /**
      * Sets limit for SOLR search query.
@@ -95,6 +116,44 @@ class SolrSearchQuery extends Query
         return $this;
     }
 
+    // @phpstan-ignore-next-line
+    public function matching($constraint) {}
+    // @phpstan-ignore-next-line
+    public function logicalAnd($constraint1) {}
+    // @phpstan-ignore-next-line
+    public function logicalOr($constraint1) {}
+    // @phpstan-ignore-next-line
+    public function logicalNot(ConstraintInterface $constraint) {}
+    // @phpstan-ignore-next-line
+    public function equals($propertyName, $operand, $caseSensitive = true) {}
+    // @phpstan-ignore-next-line
+    public function like($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function contains($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function in($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function lessThan($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function lessThanOrEqual($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function greaterThan($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function greaterThanOrEqual($propertyName, $operand) {}
+    // @phpstan-ignore-next-line
+    public function getType() {}
+    public function setQuerySettings(QuerySettingsInterface $querySettings) {}
+    // @phpstan-ignore-next-line
+    public function getQuerySettings() {}
+
+    public function count()
+    {// @phpstan-ignore-next-line
+        // TODO?
+    }
+
+    // @phpstan-ignore-next-line
+    public function getOrderings() {}
+
     /**
      * Gets limit for SOLR search query.
      *
@@ -119,4 +178,10 @@ class SolrSearchQuery extends Query
         return $this->offset;
     }
 
+    // @phpstan-ignore-next-line
+    public function getConstraint() {}
+    public function isEmpty($propertyName) {}
+    public function setSource(SourceInterface $source) {}
+    // @phpstan-ignore-next-line
+    public function getStatement() {}
 }

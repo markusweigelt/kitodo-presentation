@@ -13,7 +13,7 @@
 namespace Kitodo\Dlf\Command;
 
 use Kitodo\Dlf\Common\AbstractDocument;
-use Kitodo\Dlf\Common\DocumentCacheManager;
+use Kitodo\Dlf\Command\BaseCommand;
 use Kitodo\Dlf\Common\Indexer;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -91,12 +91,6 @@ class ReindexCommand extends BaseCommand
                 'b',
                 InputOption::VALUE_OPTIONAL,
                 'Reindex documents on the given page starting from the given value.'
-            )
-            ->addOption(
-                'softCommit',
-                null,
-                InputOption::VALUE_NONE,
-                'If this option is set, documents are just added to the index with a soft commit.'
             );
     }
 
@@ -219,12 +213,12 @@ class ReindexCommand extends BaseCommand
                 }
                 $document->setCurrentDocument($doc);
                 // save to database
-                $this->saveToDatabase($document, $input->getOption('softCommit'));
+                $this->saveToDatabase($document);
                 // add to index
-                Indexer::add($document, $this->documentRepository, $input->getOption('softCommit'));
+                Indexer::add($document, $this->documentRepository);
             }
             // Clear document cache to prevent memory exhaustion.
-            GeneralUtility::makeInstance(DocumentCacheManager::class)->flush();
+            AbstractDocument::clearDocumentCache();
         }
 
         // Clear state of persistence manager to prevent memory exhaustion.

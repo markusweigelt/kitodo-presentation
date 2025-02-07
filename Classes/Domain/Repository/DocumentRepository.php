@@ -12,7 +12,7 @@
 
 namespace Kitodo\Dlf\Domain\Repository;
 
-use Doctrine\DBAL\Result;
+use Doctrine\DBAL\ForwardCompatibility\Result;
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Common\Helper;
 use Kitodo\Dlf\Common\Solr\SolrSearch;
@@ -172,8 +172,8 @@ class DocumentRepository extends Repository
 
         $constraints = [];
 
-        if ($settings['documentSets'] ?? false) {
-            $constraints[] = $query->in('uid', GeneralUtility::intExplode(',', ((string) $settings['documentSets'])));
+        if ($settings['documentSets']) {
+            $constraints[] = $query->in('uid', GeneralUtility::intExplode(',', $settings['documentSets']));
         }
 
         if (isset($settings['excludeOther']) && (int) $settings['excludeOther'] === 0) {
@@ -182,7 +182,7 @@ class DocumentRepository extends Repository
 
         if (count($constraints)) {
             $query->matching(
-                $query->logicalAnd(...$constraints)
+                $query->logicalAnd($constraints)
             );
         }
 
@@ -216,7 +216,7 @@ class DocumentRepository extends Repository
 
         if (count($constraints)) {
             $query->matching(
-                $query->logicalAnd(...$constraints)
+                $query->logicalAnd($constraints)
             );
         }
 
@@ -364,7 +364,7 @@ class DocumentRepository extends Repository
                 ->fetchFirstColumn();
         }
 
-        return ['titles' => $countTitles[0] ?? 0, 'volumes' => $countVolumes[0] ?? 0];
+        return ['titles' => $countTitles, 'volumes' => $countVolumes];
     }
 
     /**
@@ -644,173 +644,5 @@ class DocumentRepository extends Repository
         $search = new SolrSearch($this, $collections, $settings, $searchParams, $listedMetadata, $indexedMetadata);
         $search->prepare();
         return $search;
-    }
-
-    /**
-     * Find the uid of the previous document relative to the current document uid.
-     * Otherwise backtrack the closest previous leaf node.
-     *
-     * @access public
-     *
-     * @param int $uid
-     *
-     * @return int|null
-     */
-    public function getPreviousDocumentUid($uid)
-    {
-        $currentDocument = $this->findOneByUid($uid);
-        if ($currentDocument) {
-            $currentVolume = '';
-            $parentId = $currentDocument->getPartof();
-
-            if ($parentId) {
-
-                $currentVolume = (string) $currentDocument->getVolumeSorting();
-
-                $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
-                $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_dlf_documents');
-
-                // Grab previous volume
-                $prevDocument = $queryBuilder
-                    ->select(
-                        'tx_dlf_documents.uid AS uid'
-                    )
-                    ->from('tx_dlf_documents')
-                    ->where(
-                        $queryBuilder->expr()->eq('tx_dlf_documents.partof', (int) $parentId),
-                        'tx_dlf_documents.volume_sorting < \'' . $currentVolume . '\''
-                    )
-                    ->add('orderBy', 'volume_sorting desc')
-                    ->addOrderBy('tx_dlf_documents.volume_sorting')
-                    ->execute()
-                    ->fetch();
-
-                if (!empty($prevDocument)) {
-                    return $prevDocument['uid'];
-                }
-
-                return $this->getLastChild($this->getPreviousDocumentUid($parentId));
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Find the uid of the next document relative to the current document uid.
-     * Otherwise backtrack the closest next leaf node.
-     *
-     * @access public
-     *
-     * @param int $uid
-     *
-     * @return int|null
-     */
-    public function getNextDocumentUid($uid)
-    {
-        $currentDocument = $this->findOneByUid($uid);
-        if ($currentDocument) {
-            $currentVolume = '';
-            $parentId = $currentDocument->getPartof();
-
-            if ($parentId) {
-
-                $currentVolume = (string) $currentDocument->getVolumeSorting();
-
-                $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
-                $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_dlf_documents');
-
-                // Grab next volume
-                $nextDocument = $queryBuilder
-                    ->select(
-                        'tx_dlf_documents.uid AS uid'
-                    )
-                    ->from('tx_dlf_documents')
-                    ->where(
-                        $queryBuilder->expr()->eq('tx_dlf_documents.partof', (int) $parentId),
-                        'tx_dlf_documents.volume_sorting > \'' . $currentVolume . '\''
-                    )
-                    ->add('orderBy', 'volume_sorting asc')
-                    ->addOrderBy('tx_dlf_documents.volume_sorting')
-                    ->execute()
-                    ->fetch();
-
-                if (!empty($nextDocument)) {
-                    return $nextDocument['uid'];
-                }
-
-                return $this->getFirstChild($this->getNextDocumentUid($parentId));
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Find the uid of the first leaf node
-     *
-     * @access public
-     *
-     * @param int $uid
-     *
-     * @return int
-     */
-    public function getFirstChild($uid)
-    {
-        $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
-        $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_dlf_documents');
-
-        $child = $queryBuilder
-            ->select(
-                'tx_dlf_documents.uid AS uid'
-            )
-            ->from('tx_dlf_documents')
-            ->where(
-                $queryBuilder->expr()->eq('tx_dlf_documents.partof', (int) $uid)
-            )
-            ->add('orderBy', 'volume_sorting asc')
-            ->addOrderBy('tx_dlf_documents.volume_sorting')
-            ->execute()
-            ->fetch();
-
-        if (empty($child['uid'])) {
-            return $uid;
-        }
-
-        return $this->getFirstChild($child['uid']);
-    }
-
-    /**
-     * Find the uid of the last leaf node
-     *
-     * @access public
-     *
-     * @param int $uid
-     *
-     * @return int
-     */
-    public function getLastChild($uid)
-    {
-        $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
-        $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_dlf_documents');
-
-        $child = $queryBuilder
-            ->select(
-                'tx_dlf_documents.uid AS uid'
-            )
-            ->from('tx_dlf_documents')
-            ->where(
-                $queryBuilder->expr()->eq('tx_dlf_documents.partof', (int) $uid)
-            )
-            ->add('orderBy', 'volume_sorting desc')
-            ->addOrderBy('tx_dlf_documents.volume_sorting')
-            ->execute()
-            ->fetch();
-
-        if (empty($child['uid'])) {
-            return $uid;
-        }
-
-        return $this->getFirstChild($child['uid']);
     }
 }

@@ -26,22 +26,3 @@ services:
     tags:
       - name: console.command
         command: 'kitodo:reindex'
-
-  Kitodo\Dlf\Command\OptimizeCommand:
-    tags:
-      - name: console.command
-        command: 'kitodo:optimize'
-
-  Kitodo\Dlf\Command\SuggestBuildCommand:
-    tags:
-      - name: console.command
-        command: 'kitodo:suggestBuild'
-
-  Kitodo\Dlf\Validation\DOMDocumentValidationStack:
-    autowire: false
-
-  Kitodo\Dlf\Validation\SaxonXslToSvrlValidator:
-    autowire: false
-
-  Kitodo\Dlf\Validation\XmlSchemesValidator:
-    autowire: false

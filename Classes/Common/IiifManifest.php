@@ -202,6 +202,59 @@ final class IiifManifest extends AbstractDocument
     }
 
     /**
+     * True if getUseGroups() has been called and $this->useGrps is loaded
+     *
+     * @var bool
+     * @access protected
+     */
+    protected bool $useGrpsLoaded = false;
+
+    /**
+     * Holds the configured useGrps as array.
+     *
+     * @var array
+     * @access protected
+     */
+    protected array $useGrps = [];
+
+    /**
+     * IiifManifest also populates the physical structure array entries for matching
+     * 'fileGrp's. To do that, the configuration has to be loaded; afterwards configured
+     * 'fileGrp's for thumbnails, downloads, audio, fulltext and the 'fileGrp's for images
+     * can be requested with this method.
+     *
+     * @access protected
+     *
+     * @param string $use
+     *
+     * @return array|string
+     */
+    protected function getUseGroups(string $use)
+    {
+        if (!$this->useGrpsLoaded) {
+            // Get configured USE attributes.
+            $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'files');
+            if (!empty($extConf['fileGrpImages'])) {
+                $this->useGrps['fileGrpImages'] = GeneralUtility::trimExplode(',', $extConf['fileGrpImages']);
+            }
+            if (!empty($extConf['fileGrpThumbs'])) {
+                $this->useGrps['fileGrpThumbs'] = GeneralUtility::trimExplode(',', $extConf['fileGrpThumbs']);
+            }
+            if (!empty($extConf['fileGrpDownload'])) {
+                $this->useGrps['fileGrpDownload'] = GeneralUtility::trimExplode(',', $extConf['fileGrpDownload']);
+            }
+            if (!empty($extConf['fileGrpFulltext'])) {
+                $this->useGrps['fileGrpFulltext'] = GeneralUtility::trimExplode(',', $extConf['fileGrpFulltext']);
+            }
+            if (!empty($extConf['fileGrpAudio'])) {
+                $this->useGrps['fileGrpAudio'] = GeneralUtility::trimExplode(',', $extConf['fileGrpAudio']);
+            }
+            $this->useGrpsLoaded = true;
+        }
+        return array_key_exists($use, $this->useGrps) ? $this->useGrps[$use] : [];
+    }
+
+    /**
      * @see AbstractDocument::magicGetPhysicalStructure()
      */
     protected function magicGetPhysicalStructure(): array
@@ -211,7 +264,7 @@ final class IiifManifest extends AbstractDocument
             if ($this->iiif == null || !($this->iiif instanceof ManifestInterface)) {
                 return [];
             }
-
+            $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'iiif');
             $iiifId = $this->iiif->getId();
             $this->physicalStructureInfo[$iiifId]['id'] = $iiifId;
             $this->physicalStructureInfo[$iiifId]['dmdId'] = $iiifId;
@@ -223,8 +276,8 @@ final class IiifManifest extends AbstractDocument
             $this->setFileUseDownload($iiifId, $this->iiif);
             $this->setFileUseFulltext($iiifId, $this->iiif);
 
-            $fileUseThumbs = $this->useGroupsConfiguration->getThumbnail();
-            $fileUses = $this->useGroupsConfiguration->getImage();
+            $fileUseThumbs = $this->getUseGroups('fileGrpThumbs');
+            $fileUses = $this->getUseGroups('fileGrpImages');
 
             if (!empty($this->iiif->getDefaultCanvases())) {
                 // canvases have not order property, but the context defines canveses as @list with a specific order, so we can provide an alternative
@@ -254,7 +307,7 @@ final class IiifManifest extends AbstractDocument
                         $this->physicalStructureInfo[$elements[$canvasOrder]]['annotationContainers'] = [];
                         foreach ($canvas->getPossibleTextAnnotationContainers(Motivation::PAINTING) as $annotationContainer) {
                             $this->physicalStructureInfo[$elements[$canvasOrder]]['annotationContainers'][] = $annotationContainer->getId();
-                            if ($this->getIndexAnnotations() == 1) {
+                            if ($extConf['indexAnnotations']) {
                                 $this->hasFulltext = true;
                                 $this->hasFulltextSet = true;
                             }
@@ -442,7 +495,10 @@ final class IiifManifest extends AbstractDocument
                 $details['points'] = $startCanvasIndex + 1;
             }
         }
-
+        $useGroups = $this->getUseGroups('fileGrpImages');
+        if (is_string($useGroups)) {
+            $useGroups = [$useGroups];
+        }
         // Keep for later usage.
         $this->logicalUnits[$details['id']] = $details;
         // Walk the structure recursively? And are there any children of the current element?
@@ -697,24 +753,19 @@ final class IiifManifest extends AbstractDocument
             // Load physical structure ...
             $this->magicGetPhysicalStructure();
             // ... and extension configuration.
-            $useGroups = $this->useGroupsConfiguration->getFulltext();
-
-            $physicalStructureNode = $this->physicalStructureInfo[$id];
-            if (!empty($physicalStructureNode)) {
-                while ($useGroup = array_shift($useGroups)) {
-                    if (!empty($physicalStructureNode['files'][$useGroup])) {
-                        $rawText = GeneralUtility::makeInstance(FullTextReader::class, $this->formats)->getFromXml(
-                            $id,
-                            [$useGroup => $this->getFileLocation($physicalStructureNode['files'][$useGroup])],
-                            $physicalStructureNode
-                        );
+            $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey);
+            $fileGrpsFulltext = GeneralUtility::trimExplode(',', $extConf['files']['fileGrpFulltext']);
+            if (!empty($this->physicalStructureInfo[$id])) {
+                while ($fileGrpFulltext = array_shift($fileGrpsFulltext)) {
+                    if (!empty($this->physicalStructureInfo[$id]['files'][$fileGrpFulltext])) {
+                        $rawText = parent::getFullTextFromXml($id);
                         break;
                     }
                 }
-                if ($this->getIndexAnnotations() == 1) {
+                if ($extConf['iiif']['indexAnnotations'] == 1) {
                     $iiifResource = $this->iiif->getContainedResourceById($id);
                     // Get annotation containers
-                    $annotationContainerIds = $physicalStructureNode['annotationContainers'];
+                    $annotationContainerIds = $this->physicalStructureInfo[$id]['annotationContainers'];
                     if (!empty($annotationContainerIds)) {
                         $annotationTexts = $this->getAnnotationTexts($annotationContainerIds, $iiifResource->getId());
                         $rawText .= implode(' ', $annotationTexts);
@@ -756,7 +807,11 @@ final class IiifManifest extends AbstractDocument
     {
         $fileResource = GeneralUtility::getUrl($location);
         if ($fileResource !== false) {
-            $resource = self::loadIiifResource($fileResource);
+            $conf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'iiif');
+            IiifHelper::setUrlReader(IiifUrlReader::getInstance());
+            IiifHelper::setMaxThumbnailHeight($conf['thumbnailHeight']);
+            IiifHelper::setMaxThumbnailWidth($conf['thumbnailWidth']);
+            $resource = IiifHelper::loadIiifResource($fileResource);
             if ($resource instanceof ManifestInterface) {
                 $this->iiif = $resource;
                 return true;
@@ -810,8 +865,8 @@ final class IiifManifest extends AbstractDocument
                     $this->hasFulltext = true;
                     return;
                 }
-
-                if ($this->getIndexAnnotations() == 1 && !empty($canvas->getPossibleTextAnnotationContainers(Motivation::PAINTING))) {
+                $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'iiif');
+                if ($extConf['indexAnnotations'] == 1 && !empty($canvas->getPossibleTextAnnotationContainers(Motivation::PAINTING))) {
                     foreach ($canvas->getPossibleTextAnnotationContainers(Motivation::PAINTING) as $annotationContainer) {
                         $textAnnotations = $annotationContainer->getTextAnnotations(Motivation::PAINTING);
                         if ($textAnnotations != null) {
@@ -837,7 +892,7 @@ final class IiifManifest extends AbstractDocument
     /**
      * @see AbstractDocument::magicGetThumbnail()
      */
-    protected function magicGetThumbnail(): string
+    protected function magicGetThumbnail(bool $forceReload = false): string
     {
         return $this->iiif->getThumbnailUrl();
     }
@@ -884,18 +939,6 @@ final class IiifManifest extends AbstractDocument
     }
 
     /**
-     * Get index annotations setting from extension configuration.
-     *
-     * @access private
-     *
-     * @return integer value 0 or 1
-     */
-    private function getIndexAnnotations(): int
-    {
-        return (int) GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'iiif')['indexAnnotations'];
-    }
-
-    /**
      * Set files used for download (PDF).
      *
      * @access private
@@ -907,12 +950,12 @@ final class IiifManifest extends AbstractDocument
      */
     private function setFileUseDownload(string $iiifId, $iiif): void
     {
-        $useGroups = $this->useGroupsConfiguration->getDownload();
+        $fileUseDownload = $this->getUseGroups('fileGrpDownload');
 
-        if (!empty($useGroups)) {
+        if (!empty($fileUseDownload)) {
             $docPdfRendering = $iiif->getRenderingUrlsForFormat('application/pdf');
             if (!empty($docPdfRendering)) {
-                $this->physicalStructureInfo[$iiifId]['files'][$useGroups[0]] = $docPdfRendering[0];
+                $this->physicalStructureInfo[$iiifId]['files'][$fileUseDownload[0]] = $docPdfRendering[0];
             }
         }
     }
@@ -929,16 +972,16 @@ final class IiifManifest extends AbstractDocument
      */
     private function setFileUseFulltext(string $iiifId, $iiif): void
     {
-        $useGroups = $this->useGroupsConfiguration->getFulltext();
+        $fileUseFulltext = $this->getUseGroups('fileGrpFulltext');
 
-        if (!empty($useGroups)) {
+        if (!empty($fileUseFulltext)) {
             $alto = $iiif->getSeeAlsoUrlsForFormat('application/alto+xml');
             if (empty($alto)) {
                 $alto = $iiif->getSeeAlsoUrlsForProfile('http://www.loc.gov/standards/alto/', true);
             }
             if (!empty($alto)) {
                 $this->mimeTypes[$alto[0]] = 'application/alto+xml';
-                $this->physicalStructureInfo[$iiifId]['files'][$useGroups[0]] = $alto[0];
+                $this->physicalStructureInfo[$iiifId]['files'][$fileUseFulltext[0]] = $alto[0];
                 $this->hasFulltext = true;
                 $this->hasFulltextSet = true;
             }
@@ -955,7 +998,11 @@ final class IiifManifest extends AbstractDocument
      */
     public function __wakeup(): void
     {
-        $resource = self::loadIiifResource($this->asJson);
+        $conf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'iiif');
+        IiifHelper::setUrlReader(IiifUrlReader::getInstance());
+        IiifHelper::setMaxThumbnailHeight($conf['thumbnailHeight']);
+        IiifHelper::setMaxThumbnailWidth($conf['thumbnailWidth']);
+        $resource = IiifHelper::loadIiifResource($this->asJson);
         if ($resource instanceof ManifestInterface) {
             $this->asJson = '';
             $this->iiif = $resource;
