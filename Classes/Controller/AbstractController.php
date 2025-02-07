@@ -13,22 +13,17 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Common\Helper;
-use Kitodo\Dlf\Configuration\UseGroupsConfiguration;
 use Kitodo\Dlf\Domain\Model\Document;
 use Kitodo\Dlf\Domain\Repository\DocumentRepository;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Localization\LanguageService;
-use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Pagination\PaginationInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Core\Pagination\PaginatorInterface;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
-use TYPO3\CMS\Extbase\Mvc\Request;
-use TYPO3\CMS\Extbase\Mvc\RequestInterface;
 
 /**
  * Abstract controller class for most of the plugin controller.
@@ -99,38 +94,22 @@ abstract class AbstractController extends ActionController implements LoggerAwar
     protected int $pageUid;
 
     /**
-     * Holds the configured useGroups as array.
-     *
-     * @access protected
-     * @var \Kitodo\Dlf\Configuration\UseGroupsConfiguration
-     */
-    protected UseGroupsConfiguration $useGroupsConfiguration;
-
-    /**
      * Initialize the plugin controller
      *
      * @access protected
      *
-     * @param RequestInterface $request the HTTP request
-     *
      * @return void
      */
-    protected function initialize(RequestInterface $request): void
+    protected function initialize(): void
     {
-        /** @var Request $request */
-        $this->requestData = $request->getQueryParams()['tx_dlf'] ?? [];
-        $this->pageUid = (int) ($this->requestData['id'] ?? 0);
-        $this->requestData['page'] = $this->requestData['page'] ?? 1;
+        $this->requestData = GeneralUtility::_GPmerged('tx_dlf');
+        $this->pageUid = (int) GeneralUtility::_GET('id');
 
         // Sanitize user input to prevent XSS attacks.
         $this->sanitizeRequestData();
 
         // Get extension configuration.
         $this->extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('dlf');
-
-        $this->useGroupsConfiguration = UseGroupsConfiguration::getInstance();
-
-        $this->logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
 
         $this->viewData = [
             'pageUid' => $this->pageUid,
@@ -150,9 +129,6 @@ abstract class AbstractController extends ActionController implements LoggerAwar
      */
     protected function loadDocument(int $documentId = 0): void
     {
-        // Sanitize FlexForm settings to avoid later casting.
-        $this->sanitizeSettings();
-
         // Get document ID from request data if not passed as parameter.
         if ($documentId === 0 && !empty($this->requestData['id'])) {
             $documentId = $this->requestData['id'];
@@ -212,18 +188,6 @@ abstract class AbstractController extends ActionController implements LoggerAwar
                 ]
             )
             ->build();
-    }
-
-    /**
-     * Checks if doc of its fulltext is missing or is empty (no pages)
-     *
-     * @access protected
-     *
-     * @return bool
-     */
-    protected function isDocOrFulltextMissingOrEmpty(): bool
-    {
-        return $this->isDocMissingOrEmpty() || empty($this->useGroupsConfiguration->getFulltext());
     }
 
     /**
@@ -313,59 +277,6 @@ abstract class AbstractController extends ActionController implements LoggerAwar
     }
 
     /**
-     * Sanitize settings from FlexForm.
-     *
-     * @access protected
-     *
-     * @return void
-     */
-    protected function sanitizeSettings(): void
-    {
-        $this->setDefaultIntSetting('storagePid', 0);
-
-        if ($this instanceof MetadataController) {
-            $this->setDefaultIntSetting('rootline', 0);
-            $this->setDefaultIntSetting('originalIiifMetadata', 0);
-            $this->setDefaultIntSetting('displayIiifDescription', 1);
-            $this->setDefaultIntSetting('displayIiifRights', 1);
-            $this->setDefaultIntSetting('displayIiifLinks', 1);
-        }
-
-        if ($this instanceof NavigationController) {
-            $this->setDefaultIntSetting('pageStep', 5);
-        }
-
-        if ($this instanceof OaiPmhController) {
-            $this->setDefaultIntSetting('limit', 5);
-            $this->setDefaultIntSetting('solr_limit', 50000);
-        }
-
-        if ($this instanceof PageViewController) {
-            $this->setDefaultIntSetting('useInternalProxy', 0);
-        }
-    }
-
-    /**
-     * Sets default value for setting if not yet set.
-     *
-     * @access protected
-     *
-     * @param string $setting name of setting
-     * @param int $value for being set if empty
-     *
-     * @return void
-     */
-    protected function setDefaultIntSetting(string $setting, int $value): void
-    {
-        if (!array_key_exists($setting, $this->settings) || empty($this->settings[$setting])) {
-            $this->settings[$setting] = $value;
-            $this->logger->info('Setting "' . $setting . '" not set, using default value "' . $value . '" in ' . get_class($this) . '.');
-        } else {
-            $this->settings[$setting] = (int) $this->settings[$setting];
-        }
-    }
-
-    /**
      * Sets page value.
      *
      * @access protected
@@ -395,18 +306,15 @@ abstract class AbstractController extends ActionController implements LoggerAwar
         // Set default values if not set.
         // $this->requestData['page'] may be integer or string (physical structure @ID)
         if (
-            isset($this->requestData['page'])
-            && (
-                (int) $this->requestData['page'] > 0
-                || empty($this->requestData['page'])
-                || is_array($this->requestData['docPage'])
-            )
+            (int) $this->requestData['page'] > 0
+            || empty($this->requestData['page']
+            || is_array($this->requestData['docPage']))
         ) {
             if (isset($this->settings['multiViewType']) && $this->document->getCurrentDocument()->tableOfContents[0]['type'] === $this->settings['multiViewType']) {
                 $i = 0;
                 foreach ($this->documentArray as $document) {
                     if ($document !== null) {
-                        $this->requestData['docPage'][$i] = MathUtility::forceIntegerInRange((int) $this->requestData['docPage'][$i], 1, $document->numPages, 1);
+                        $this->requestData['docPage'][$i] = MathUtility::forceIntegerInRange((int)$this->requestData['docPage'][$i], 1, $document->numPages, 1);
                         $i++;
                     }
                 }
@@ -419,19 +327,15 @@ abstract class AbstractController extends ActionController implements LoggerAwar
     }
 
     /**
-     * Wrapper for ActionController::processRequest in order to initialize things
-     * without using a constructor.
+     * This is the constructor
      *
      * @access public
      *
-     * @param RequestInterface $request the request
-     *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function processRequest(RequestInterface $request): ResponseInterface
+    public function __construct()
     {
-        $this->initialize($request);
-        return parent::processRequest($request);
+        $this->initialize();
     }
 
     /**
@@ -496,9 +400,9 @@ abstract class AbstractController extends ActionController implements LoggerAwar
                 $lastStartRecordNumberGrid = $startRecordNumber; // save last $startRecordNumber for LastPage button
 
                 // array with label as screen/pagination page number
-                // and startRecordNumber for correct structure of the link
+                // and startRecordNumer for correct structure of the link
                 //<f:link.action action="{action}"
-                //      addQueryString="untrusted"
+                //      addQueryString="true"
                 //      argumentsToBeExcludedFromQueryString="{0: 'tx_dlf[page]'}"
                 //      additionalParams="{'tx_dlf[page]': page.startRecordNumber}"
                 //      arguments="{searchParameter: lastSearch}">{page.label}</f:link.action>
@@ -566,14 +470,11 @@ abstract class AbstractController extends ActionController implements LoggerAwar
      */
     private function getDocumentByUid(int $documentId)
     {
-        // TODO: implement multiView as it is in getDocumentByUrl
         $doc = null;
         $this->document = $this->documentRepository->findOneByIdAndSettings($documentId);
 
         if ($this->document) {
-            $doc = AbstractDocument::getInstance($this->document->getLocation(), $this->settings, false);
-            // fix for count(): Argument #1 ($value) must be of type Countable|array, null given
-            $this->documentArray[] = $doc;
+            $doc = AbstractDocument::getInstance($this->document->getLocation(), $this->settings, true);
         } else {
             $this->logger->error('Invalid UID "' . $documentId . '" or PID "' . $this->settings['storagePid'] . '" for document loading');
         }
@@ -584,13 +485,13 @@ abstract class AbstractController extends ActionController implements LoggerAwar
     /**
      * Get document by URL.
      *
-     * @access protected
+     * @access private
      *
      * @param string $documentId The document's URL
      *
      * @return AbstractDocument
      */
-    protected function getDocumentByUrl(string $documentId)
+    private function getDocumentByUrl(string $documentId)
     {
         $doc = AbstractDocument::getInstance($documentId, $this->settings, true);
 
@@ -608,7 +509,7 @@ abstract class AbstractController extends ActionController implements LoggerAwar
         } else {
             $this->documentArray[] = $doc;
         }
-        if (isset($this->requestData['multipleSource']) && is_array($this->requestData['multipleSource'])) {
+        if ($this->requestData['multipleSource'] && is_array($this->requestData['multipleSource'])) {
             $i = 0;
             foreach ($this->requestData['multipleSource'] as $location) {
                 $document = AbstractDocument::getInstance($location, $this->settings, true);
@@ -620,19 +521,20 @@ abstract class AbstractController extends ActionController implements LoggerAwar
         }
 
         if ($doc !== null) {
-            $this->document = GeneralUtility::makeInstance(Document::class);
-
             if ($doc->recordId) {
                 // find document from repository by recordId
                 $docFromRepository = $this->documentRepository->findOneByRecordId($doc->recordId);
                 if ($docFromRepository !== null) {
                     $this->document = $docFromRepository;
+                } else {
+                    // create new dummy Document object
+                    $this->document = GeneralUtility::makeInstance(Document::class);
                 }
             }
 
             // Make sure configuration PID is set when applicable
             if ($doc->cPid == 0) {
-                $doc->cPid = max($this->settings['storagePid'], 0);
+                $doc->cPid = max((int) $this->settings['storagePid'], 0);
             }
 
             $this->document->setLocation($documentId);

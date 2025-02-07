@@ -46,7 +46,7 @@
  * @param {DlfViewerConfig} settings
  * @constructor
  */
-var dlfViewer = function (settings) {
+var dlfViewer = function(settings){
 
     /**
      * The element id of the map container
@@ -338,12 +338,15 @@ dlfViewer.prototype.countPages = function () {
 /**
  * Methods inits and binds the custom controls to the dlfViewer. Right now that are the
  * fulltext, score, and the image manipulation control
+ *
+ * @param {Array.<string>} controlNames
  */
 dlfViewer.prototype.addCustomControls = function() {
     var fulltextControl = undefined,
         fulltextDownloadControl = undefined,
         annotationControl = undefined,
-        imageManipulationControl = undefined;
+        imageManipulationControl = undefined,
+        images = this.images;
 
     //
     // Annotation facsimile
@@ -479,9 +482,9 @@ dlfViewer.prototype.addCustomControls = function() {
         $('#tx-dlf-tools-fulltext').remove();
     }
 
-    if (this.scoresLoaded_ !== undefined && this.scoresLoaded_ !== null) {
+    if (this.scoresLoaded_ !== undefined) {
         var context = this;
-        const scoreControl = new dlfViewerScoreControl(this, this.pagebeginning, this.imageUrls.length);
+		const scoreControl = new dlfViewerScoreControl(this, this.pagebeginning, this.imageUrls.length);
         this.scoresLoaded_.then(function (scoreData) {
             scoreControl.loadScoreData(scoreData, tk);
 
@@ -618,13 +621,13 @@ dlfViewer.prototype.addCustomControls = function() {
     //
     if ($('#tx-dlf-tools-imagetools').length > 0) {
 
-        // Should be called if CORS is enabled
+        // should be called if cors is enabled
         imageManipulationControl = new dlfViewerImageManipulationControl({
             controlTarget: $('.tx-dlf-tools-imagetools')[0],
             map: this.map,
         });
 
-        // Bind behavior of both together
+        // bind behavior of both together
         if (fulltextControl !== undefined) {
             $(imageManipulationControl).on("activate-imagemanipulation", $.proxy(fulltextControl.deactivate, fulltextControl));
             $(fulltextControl).on("activate-fulltext", $.proxy(imageManipulationControl.deactivate, imageManipulationControl));
@@ -634,7 +637,7 @@ dlfViewer.prototype.addCustomControls = function() {
             $(annotationControl).on("activate-annotations", $.proxy(imageManipulationControl.deactivate, imageManipulationControl));
         }
 
-        // Set on object scope
+        // set on object scope
         this.imageManipulationControl = imageManipulationControl;
 
     }
@@ -649,7 +652,7 @@ dlfViewer.prototype.addCustomControls = function() {
  * @param {number} width
  * @param {number} height
  *
- * @returns void
+ * @return void
  */
 dlfViewer.prototype.addHighlightField = function(highlightField, imageIndex, width, height) {
 
@@ -670,7 +673,7 @@ dlfViewer.prototype.addHighlightField = function(highlightField, imageIndex, wid
  * Creates OpenLayers controls
  * @param {Array.<string>} controlNames
  * @param {Array.<ol.layer.Layer>} layers
- * @returns {Array.<ol.control.Control>}
+ * @return {Array.<ol.control.Control>}
  * @private
  */
 dlfViewer.prototype.createControls_ = function(controlNames, layers) {
@@ -694,7 +697,7 @@ dlfViewer.prototype.createControls_ = function(controlNames, layers) {
  *
  * @param {string} controlName
  * @param {Array.<ol.layer.Layer>} layers
- * @returns {ol.control.Control | null}
+ * @return {ol.control.Control | null}
  * @protected
  */
 dlfViewer.prototype.createControl = function(controlName, layers) {
@@ -707,7 +710,7 @@ dlfViewer.prototype.createControl = function(controlName, layers) {
 
             var ovExtent = ol.extent.buffer(
                 extent,
-                Number(Math.max(ol.extent.getWidth(extent), ol.extent.getHeight(extent)))
+                1 * Math.max(ol.extent.getWidth(extent), ol.extent.getHeight(extent))
             );
 
             return new ol.control.OverviewMap({
@@ -732,18 +735,6 @@ dlfViewer.prototype.createControl = function(controlName, layers) {
         default:
             return null;
     }
-};
-
-/**
- * Forwards the search to dlfUtils.searchFeatureCollectionForWords
- *
- * @param {Array.<ol.Feature>} stringFeatures - Array of features containing text information
- * @param {string} value - Search term
- * @returns {Array.<ol.Feature>|undefined} Array of OpenLayers features containing found words
- * @see dlfUtils.searchFeatureCollectionForWords
- */
-dlfViewer.prototype.searchFeatures = function(stringFeatures, value) {
-  return dlfUtils.searchFeatureCollectionForWords(stringFeatures, value);
 };
 
 /**
@@ -798,23 +789,23 @@ dlfViewer.prototype.displayHighlightWord = function(highlightWords = null) {
     }
 
     if (this.highlightWords !== null) {
-        const self = this;
-        const values = decodeURIComponent(this.highlightWords).split(';');
+        var self = this;
+        var values = decodeURIComponent(this.highlightWords).split(';');
 
         $.when.apply($, this.fulltextsLoaded_)
-            .done((fulltextData, fulltextDataImageTwo) => {
-                const stringFeatures = [];
+            .done(function (fulltextData, fulltextDataImageTwo) {
+                var stringFeatures = [];
 
-                [fulltextData, fulltextDataImageTwo].forEach(data => {
+                [fulltextData, fulltextDataImageTwo].forEach(function (data) {
                     if (data !== undefined) {
                         Array.prototype.push.apply(stringFeatures, data.getStringFeatures());
                     }
                 });
 
-                values.forEach((value) => {
-                    const features = this.searchFeatures(stringFeatures, value);
+                values.forEach(function(value) {
+                    var features = dlfUtils.searchFeatureCollectionForCoordinates(stringFeatures, value);
                     if (features !== undefined) {
-                        for (let i = 0; i < features.length; i++) {
+                        for (var i = 0; i < features.length; i++) {
                             self.highlightLayer.getSource().addFeatures([features[i]]);
                         }
                     }
@@ -839,11 +830,7 @@ dlfViewer.prototype.init = function(controlNames) {
 
             // Initiate loading fulltexts
             this.initLoadFulltexts();
-
-            if (this.score !== '') {
-                // Initiate loading scores
-                this.initLoadScores();
-            }
+            this.initLoadScores();
 
             var controls = controlNames.length > 0 || controlNames[0] === ""
                 ? this.createControls_(controlNames, layers)
@@ -937,7 +924,7 @@ dlfViewer.prototype.updateLayerSize = function() {
  * Generate the OpenLayers layer objects for given image sources. Returns a promise / jQuery deferred object.
  *
  * @param {ImageDesc[]} imageSourceObjs
- * @returns {jQuery.Deferred.<function(Array.<ol.layer.Layer>)>}
+ * @return {jQuery.Deferred.<function(Array.<ol.layer.Layer>)>}
  * @private
  */
 dlfViewer.prototype.initLayer = function(imageSourceObjs) {

@@ -612,7 +612,7 @@ dlfViewerFullTextControl.prototype.showFulltext = function(features) {
     if (fullTextScrollElementId.substr(0,1) === '#') {
         fullTextScrollElementId = fullTextScrollElementId.substr(1);
     }
-    var target = document.getElementById(fullTextScrollElementId.trim());
+    var target = document.getElementById(fullTextScrollElementId);
     if (target !== null) {
         target.innerHTML = "";
         for (var feature of features) {

@@ -170,8 +170,7 @@ class Annotation
      *
      * @return array
      */
-    public function getPageTargets()
-    {
+    public function getPageTargets() {
         $pageTargets = [];
         if (is_array($this->targetPages)) {
             foreach ($this->targetPages as $target) {
@@ -260,4 +259,5 @@ class Annotation
 
         return false;
     }
+
 }

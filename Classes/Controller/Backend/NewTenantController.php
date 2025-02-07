@@ -20,22 +20,17 @@ use Kitodo\Dlf\Domain\Repository\FormatRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\SolrCoreRepository;
 use Kitodo\Dlf\Domain\Repository\StructureRepository;
-use Psr\Http\Message\ResponseInterface;
-use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Backend\View\BackendTemplateView;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Localization\LocalizationFactory;
-use TYPO3\CMS\Core\Messaging\FlashMessageService;
-use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Mvc\Request;
+use TYPO3\CMS\Extbase\Mvc\View\ViewInterface;
 use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
-use TYPO3\CMS\Fluid\View\TemplateView;
-use TYPO3Fluid\Fluid\View\ViewInterface;
 
 /**
  * Controller class for the backend module 'New Tenant'.
@@ -70,6 +65,12 @@ class NewTenantController extends AbstractController
      * @var LocalizationFactory Language factory to get language key/values by our own.
      */
     protected LocalizationFactory $languageFactory;
+
+    /**
+     * @access protected
+     * @var string Backend Template Container
+     */
+    protected $defaultViewObjectName = BackendTemplateView::class;
 
     /**
      * @access protected
@@ -144,27 +145,6 @@ class NewTenantController extends AbstractController
     }
 
     /**
-     * Returns a response object with either the given html string or the current rendered view as content.
-     * 
-     * @access protected
-     * 
-     * @param ?string $html optional html
-     * 
-     * @return ResponseInterface the response
-     */
-    protected function htmlResponse(?string $html = null): ResponseInterface
-    {
-        $flashMessageService = GeneralUtility::makeInstance(FlashMessageService::class);
-        $messageQueue = $flashMessageService->getMessageQueueByIdentifier();
-
-        $moduleTemplateFactory = GeneralUtility::makeInstance(ModuleTemplateFactory::class);
-        $moduleTemplate = $moduleTemplateFactory->create($this->request);
-        $moduleTemplate->setContent($this->view->render());
-        $moduleTemplate->setFlashMessageQueue($messageQueue);
-        return parent::htmlResponse(($html ?? $moduleTemplate->renderContent()));
-    }
-
-    /**
      * Initialization for all actions
      *
      * @access protected
@@ -173,7 +153,6 @@ class NewTenantController extends AbstractController
      */
     protected function initializeAction(): void
     {
-        // replace with $this->request->getQueryParams() when dropping support for Typo3 v11, see Deprecation-100596
         $this->pid = (int) GeneralUtility::_GP('id');
 
         $frameworkConfiguration = $this->configurationManager->getConfiguration($this->configurationManager::CONFIGURATION_TYPE_FRAMEWORK);
@@ -196,9 +175,9 @@ class NewTenantController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function addFormatAction(): ResponseInterface
+    public function addFormatAction(): void
     {
         // Include formats definition file.
         $formatsDefaults = $this->getRecords('Format');
@@ -230,7 +209,7 @@ class NewTenantController extends AbstractController
             $persistenceManager->persistAll();
         }
 
-        return $this->redirect('index');
+        $this->forward('index');
     }
 
     /**
@@ -238,9 +217,9 @@ class NewTenantController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function addMetadataAction(): ResponseInterface
+    public function addMetadataAction(): void
     {
         // Include metadata definition file.
         $metadataDefaults = $this->getRecords('Metadata');
@@ -317,7 +296,7 @@ class NewTenantController extends AbstractController
             Helper::processDatabaseAsAdmin($translateData);
         }
 
-        return $this->redirect('index');
+        $this->forward('index');
     }
 
     /**
@@ -325,9 +304,9 @@ class NewTenantController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function addSolrCoreAction(): ResponseInterface
+    public function addSolrCoreAction(): void
     {
         $doPersist = false;
 
@@ -353,7 +332,7 @@ class NewTenantController extends AbstractController
             $persistenceManager->persistAll();
         }
 
-        return $this->redirect('index');
+        $this->forward('index');
     }
 
     /**
@@ -361,9 +340,9 @@ class NewTenantController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function addStructureAction(): ResponseInterface
+    public function addStructureAction(): void
     {
         // Include structure definition file.
         $structureDefaults = $this->getRecords('Structure');
@@ -408,7 +387,29 @@ class NewTenantController extends AbstractController
             Helper::processDatabaseAsAdmin($translateData);
         }
 
-        return $this->redirect('index');
+        $this->forward('index');
+    }
+
+    /**
+     * Set up the doc header properly here
+     * 
+     * @access protected
+     *
+     * @param ViewInterface $view
+     *
+     * @return void
+     */
+    protected function initializeView(ViewInterface $view): void
+    {
+        /** @var BackendTemplateView $view */
+        parent::initializeView($view);
+        if ($this->actionMethodName == 'indexAction') {
+            $this->pageInfo = BackendUtility::readPageAccess($this->pid, $GLOBALS['BE_USER']->getPagePermsClause(1));
+            $view->getModuleTemplate()->setFlashMessageQueue($this->controllerContext->getFlashMessageQueue());
+        }
+        if ($view instanceof BackendTemplateView) {
+            $view->getModuleTemplate()->getPageRenderer()->loadRequireJsModule('TYPO3/CMS/Backend/Modal');
+        }
     }
 
     /**
@@ -416,16 +417,14 @@ class NewTenantController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function indexAction(): ResponseInterface
+    public function indexAction(): void
     {
         $recordInfos = [];
 
-        $this->pageInfo = BackendUtility::readPageAccess($this->pid, $GLOBALS['BE_USER']->getPagePermsClause(1));
-
-        if (!isset($this->pageInfo['doktype']) || $this->pageInfo['doktype'] != 254) {
-            return $this->redirect('error');
+        if ($this->pageInfo['doktype'] != 254) {
+            $this->forward('error');
         }
 
         $formatsDefaults = $this->getRecords('Format');
@@ -443,8 +442,6 @@ class NewTenantController extends AbstractController
         $recordInfos['solrcore']['numCurrent'] = $this->solrCoreRepository->countByPid($this->pid);
 
         $this->view->assign('recordInfos', $recordInfos);
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -455,9 +452,9 @@ class NewTenantController extends AbstractController
      * @return void
      */
     // @phpstan-ignore-next-line
-    public function errorAction(): ResponseInterface
+    public function errorAction(): void
     {
-        return $this->htmlResponse();
+        // TODO: Call parent::errorAction() when dropping support for TYPO3 v10.
     }
 
     /**
@@ -493,9 +490,13 @@ class NewTenantController extends AbstractController
      */
     private function getRecords(string $recordType): array
     {
-        $filePath = GeneralUtility::getFileAbsFileName('EXT:dlf/Resources/Private/Data/' . $recordType . 'Defaults.json');
-        if (file_exists($filePath)) {
-            $fileContents = file_get_contents($filePath);
+        $filePath = Environment::getPublicPath() . '/typo3conf/ext/dlf/Resources/Private/Data/' . $recordType . 'Defaults.json';
+
+        $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class);
+        $fileObject = $resourceFactory->getFileObjectFromCombinedIdentifier($filePath);
+
+        if ($fileObject !== null) {
+            $fileContents = $fileObject->getContents();
             $records = json_decode($fileContents, true);
 
             if (json_last_error() === JSON_ERROR_NONE) {

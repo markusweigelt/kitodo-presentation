@@ -5,6 +5,7 @@ plugin.tx_dlf {
     }
     settings {
         storagePid = {$plugin.tx_dlf.persistence.storagePid}
+        useInternalProxy = 1
     }
 }
 
@@ -17,7 +18,6 @@ config {
 
 page {
   includeCSS {
-    embedded3dviewer = EXT:dlf/Resources/Public/Stylesheets/embedded-3d-viewer.css
     jPlayer = EXT:dlf/Resources/Public/JavaScript/jPlayer/blue.monday/css/jplayer.blue.monday.min.css
     openLayers = EXT:dlf/Resources/Public/JavaScript/OpenLayers/openlayers.css
   }
@@ -66,24 +66,15 @@ page {
     kitodo-pageView-searchInDocument = EXT:dlf/Resources/Public/JavaScript/PageView/SearchInDocument.js
     kitodo-pageView-pageView = EXT:dlf/Resources/Public/JavaScript/PageView/PageView.js
     kitodo-search-suggest = EXT:dlf/Resources/Public/JavaScript/Search/Suggester.js
+
   }
 }
 
-[typo3.branch=="11.5"]
-  page.inlineSettings {
-    dlfAssets = /typo3conf/ext/dlf/Resources/Public/
-  }
-[else]
-  page.inlineSettings {
-    dlfAssets = /_assets/007831ab53eafe3f6be2b9b1baf2a8d6/
-  }
-[end]
-
-[request && like(traverse(request.getQueryParams(), 'tx_dlf/multiview'), '1')]
+[like(traverse(request.getQueryParams(), 'tx_dlf/multiview'), '1')]
 page.includeJSFooter {
     # Gridstack
     gridstack = EXT:dlf/Resources/Public/JavaScript/Gridstack/gridstack-all.js
-    gridstack-init = EXT:dlf/Resources/Public/JavaScript/PageView/Gridstack.js
+    gridstack-init = EXT:dlf/Resources/Public/JavaScript/PageView/gridstack.js
 }
 [end]
 

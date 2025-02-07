@@ -11,7 +11,6 @@
 
 namespace Kitodo\Dlf\Controller;
 
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
 
 /**
@@ -29,9 +28,9 @@ class StatisticsController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         $foundNumbers = $this->documentRepository->getStatisticsForSelectedCollection($this->settings);
 
@@ -55,7 +54,5 @@ class StatisticsController extends AbstractController
         }
 
         $this->view->assign('content', $content);
-
-        return $this->htmlResponse();
     }
 }

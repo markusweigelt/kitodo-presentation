@@ -197,13 +197,13 @@
 			<trans-unit id="plugins.navigation.flexform.features.zoom">
 				<source><![CDATA[Buttons for zoom-in, zoom-out and full screen]]></source>
 			</trans-unit>
-			<trans-unit id="plugins.navigation.flexform.features.doublePage">
+			<trans-unit id="plugins.navigation.flexform.features.doublepage">
 				<source><![CDATA[Buttons for double page mode and recto/verso adjustment]]></source>
 			</trans-unit>
-			<trans-unit id="plugins.navigation.flexform.features.pageSelect">
+			<trans-unit id="plugins.navigation.flexform.features.pageselect">
 				<source><![CDATA[Page navigation menu]]></source>
 			</trans-unit>
-			<trans-unit id="plugins.navigation.flexform.features.listView">
+			<trans-unit id="plugins.navigation.flexform.features.listview">
 				<source><![CDATA[Link to page with listview plugin]]></source>
 			</trans-unit>
 			<trans-unit id="plugins.navigation.flexform.features.measureForward">
@@ -211,12 +211,6 @@
 			</trans-unit>
 			<trans-unit id="plugins.navigation.flexform.features.measureBack">
 				<source><![CDATA[One measureBack back]]></source>
-			</trans-unit>
-			<trans-unit id="plugins.navigation.flexform.features.documentBack">
-				<source><![CDATA[Show previous document]]></source>
-			</trans-unit>
-			<trans-unit id="plugins.navigation.flexform.features.documentForward">
-				<source><![CDATA[Show next document]]></source>
 			</trans-unit>
 			<trans-unit id="plugins.navigation.title">
 				<source><![CDATA[Kitodo: Navigation]]></source>
@@ -425,21 +419,6 @@
 			<trans-unit id="plugins.metadata.flexform.separator">
 				<source><![CDATA[Separator for multi-valued fields]]></source>
 			</trans-unit>
-			<trans-unit id="plugins.embedded3dviewer.title">
-				<source><![CDATA[Kitodo: Embedded 3D Viewer]]></source>
-			</trans-unit>
-			<trans-unit id="plugins.embedded3dviewer.description">
-				<source><![CDATA[Embedded 3D Viewer Plugin for Kitodo.Presentation]]></source>
-			</trans-unit>
-			<trans-unit id="plugins.embedded3dviewer.flexform.document">
-				<source><![CDATA[METS/MODS url containing the model]]></source>
-			</trans-unit>
-			<trans-unit id="plugins.embedded3dviewer.flexform.model">
-				<source><![CDATA[Url of model]]></source>
-			</trans-unit>
-			<trans-unit id="plugins.embedded3dviewer.flexform.viewer">
-				<source><![CDATA[Name of viewer]]></source>
-			</trans-unit>
 			<trans-unit id="plugins.annotation.title">
         		<source><![CDATA[Kitodo: Annotations]]></source>
         	</trans-unit>
@@ -456,7 +435,7 @@
                 <source><![CDATA[Error!]]></source>
             </trans-unit>
             <trans-unit id="flash.coreStatus" approved="yes">
-                <source><![CDATA[Start Time: %s<br />Uptime: %s<br />Last Modified: %s<br />Number of Documents: %u]]></source>
+                <source><![CDATA[Start Time: %s<br />Uptime: %s<br />Last Modified: %ss<br />Number of Documents: %u]]></source>
             </trans-unit>
             <trans-unit id="flash.days" approved="yes">
                 <source><![CDATA[days]]></source>

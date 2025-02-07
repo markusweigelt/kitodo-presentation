@@ -104,7 +104,7 @@ class Solr implements LoggerAwareInterface
 
     /**
      * @access protected
-     * @var Solr[] This holds the singleton search objects with their core as array key
+     * @var array(Solr) This holds the singleton search objects with their core as array key
      */
     protected static array $registry = [];
 
@@ -331,11 +331,11 @@ class Solr implements LoggerAwareInterface
         $number = max($number, 0);
         // Check if core already exists.
         $solr = self::getInstance('dlfCore' . $number);
-        while ($solr->ready) {
-            $number++;
-            $solr = self::getInstance('dlfCore' . $number);
+        if (!$solr->ready) {
+            return $number;
+        } else {
+            return self::getNextCoreNumber($number + 1);
         }
-        return $number;
     }
 
     /**
@@ -650,61 +650,5 @@ class Solr implements LoggerAwareInterface
         } catch (\Exception $e) {
             // Nothing to do here.
         }
-    }
-
-    /**
-     * Sends the commit and optimize command to the index.
-     *
-     * @access public
-     *
-     * @param bool $commit If true, the commit command is sent to the index
-     * @param bool $optimize If true, the optimize command is sent to the index
-     *
-     * @return bool true if executing the command worked
-     */
-    public function optimize(bool $commit, bool $optimize): bool
-    {
-        // get an update query instance
-        $update = $this->service->createUpdate();
-
-        // commit the index
-        if ($commit) {
-            $update->addCommit(false);
-        }
-
-        // optimize the index
-        if ($optimize) {
-            $update->addOptimize(false);
-        }
-
-        // this executes the query and returns the result
-        $result = $this->service->update($update);
-
-        if ($result->getStatus()) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Sends the suggest.build=true command to the index.
-     *
-     * @access public
-     *
-     * @return bool true if executing the command worked
-     */
-    public function suggestBuild(): bool
-    {
-        $query = $this->service->createSuggester();
-        $query->addParam('suggest.build', 'true');
-        $query->setCount(0);
-        $result = $this->service->execute($query);
-
-        if ($result->getResponse()->getStatusCode() == 400) {
-            return false;
-        }
-
-        return true;
     }
 }

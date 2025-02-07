@@ -25,14 +25,14 @@ class JsFooterViewHelperTest extends FunctionalTestCase
     /**
      * @var bool Speed up this test case, it needs no database
      */
-    protected bool $initializeDatabase = false;
+    protected $initializeDatabase = false;
 
     /**
      * @test
      */
     public function pageRendererCallsAddJsFooterInlineCode(): void
     {
-        $pageRendererProphecy = $this->getMockBuilder(PageRenderer::class)->disableOriginalConstructor()->getMock();
+        $pageRendererProphecy = $this->getMockBuilder(PageRenderer::class)->getMock();
 
         $pageRendererProphecy->expects(self::once())->method('addJsFooterInlineCode')->with(
             'js-dlf-inline-footer', '$(document).ready(function() {});'

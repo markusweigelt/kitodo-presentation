@@ -47,7 +47,6 @@ class ReindexAdditionalFieldProvider extends BaseAdditionalFieldProvider
             $taskInfo['solr'] = $task->getSolr();
             $taskInfo['owner'] = $task->getOwner();
             $taskInfo['all'] = $task->isAll();
-            $taskInfo['softCommit'] = $task->isSoftCommit();
         } else {
             $taskInfo['dryRun'] = false;
             $taskInfo['coll'] = [];
@@ -55,7 +54,6 @@ class ReindexAdditionalFieldProvider extends BaseAdditionalFieldProvider
             $taskInfo['solr'] = - 1;
             $taskInfo['owner'] = '';
             $taskInfo['all'] = false;
-            $taskInfo['softCommit'] = false;
         }
 
         $additionalFields = [];
@@ -96,9 +94,6 @@ class ReindexAdditionalFieldProvider extends BaseAdditionalFieldProvider
             'cshKey' => '_MOD_system_txschedulerM1',
             'cshLabel' => $fieldId
         ];
-
-        // Checkbox for soft commit
-        $additionalFields['softCommit'] = $this->getSoftCommitField($taskInfo['softCommit']);
 
         return $additionalFields;
     }

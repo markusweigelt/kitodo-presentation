@@ -11,7 +11,6 @@
 
 namespace Kitodo\Dlf\Controller;
 
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -72,33 +71,31 @@ class AudioplayerController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissingOrEmpty()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
         }
 
         $this->setDefaultPage();
 
         // Check if there are any audio files available.
-        $useGroups = $this->useGroupsConfiguration->getAudio();
-        while ($useGroup = array_shift($useGroups)) {
-            $physicalStructureInfo = $this->document->getCurrentDocument()->physicalStructureInfo[$this->document->getCurrentDocument()->physicalStructure[$this->requestData['page'] ?? 0]];
-            if (array_key_exists($useGroup, $physicalStructureInfo['files'])) {
-                $fileId = $physicalStructureInfo['files'][$useGroup];
-                if (!empty($fileId)) {
-                    // Get audio data.
-                    $file = $this->document->getCurrentDocument()->getFileInfo($fileId);
-                    $this->audio['url'] = $file['location'];
-                    $this->audio['label'] = $physicalStructureInfo['label'];
-                    $this->audio['mimetype'] = $file['mimeType'];
-                    break;
-                }
+        $fileGrpsAudio = GeneralUtility::trimExplode(',', $this->extConf['files']['fileGrpAudio']);
+        while ($fileGrpAudio = array_shift($fileGrpsAudio)) {
+            $physicalStructureInfo = $this->document->getCurrentDocument()->physicalStructureInfo[$this->document->getCurrentDocument()->physicalStructure[$this->requestData['page']]];
+            $fileId = $physicalStructureInfo['files'][$fileGrpAudio];
+            if (!empty($fileId)) {
+                // Get audio data.
+                $file = $this->document->getCurrentDocument()->getFileInfo($fileId);
+                $this->audio['url'] = $file['location'];
+                $this->audio['label'] = $physicalStructureInfo['label'];
+                $this->audio['mimetype'] = $file['mimeType'];
+                break;
             }
         }
 
@@ -106,7 +103,5 @@ class AudioplayerController extends AbstractController
             // Add jPlayer javascript.
             $this->addPlayerJS();
         }
-
-        return $this->htmlResponse();
     }
 }

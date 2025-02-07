@@ -10,7 +10,7 @@
  * LICENSE.txt file that was distributed with this source code.
  */
 
-if (!defined('TYPO3')) {
+if (!defined('TYPO3_MODE')) {
     die('Access denied.');
 }
 // Define constants.
@@ -47,7 +47,7 @@ $iconArray = [
     'tx-dlf-statistics' => 'EXT:dlf/Resources/Public/Icons/tx-dlf-statistics.svg',
     'tx-dlf-tableofcontents' => 'EXT:dlf/Resources/Public/Icons/tx-dlf-tableofcontents.svg',
     'tx-dlf-toolbox' => 'EXT:dlf/Resources/Public/Icons/tx-dlf-toolbox.svg',
-    'tx-dlf-embedded3dviewer' => 'EXT:dlf/Resources/Public/Icons/tx-dlf-embedded3dviewer.svg',
+    'tx_dlf_view3d' => 'EXT:dlf/Resources/Public/Icons/tx_dlf_view3d.svg',
 ];
 $iconRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(
     \TYPO3\CMS\Core\Imaging\IconRegistry::class
@@ -72,7 +72,6 @@ $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['too
 $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['tools'][\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getCN($_EXTKEY) . '_fulltextdownloadtool'] = 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_toolbox.fulltextdownloadtool';
 $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['tools'][\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getCN($_EXTKEY) . '_imagedownloadtool'] = 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_toolbox.imagedownloadtool';
 $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['tools'][\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getCN($_EXTKEY) . '_imagemanipulationtool'] = 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_toolbox.imagemanipulationtool';
-$GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['tools'][\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getCN($_EXTKEY) . '_modeldownloadtool'] = 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_toolbox.modeldownloadtool';
 $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['tools'][\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getCN($_EXTKEY) . '_pdfdownloadtool'] = 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_toolbox.pdfdownloadtool';
 $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['dlf/Classes/Plugin/Toolbox.php']['tools'][\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::getCN($_EXTKEY) . '_searchindocumenttool'] = 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_toolbox.searchindocumenttool';
 // Register hooks.
@@ -97,24 +96,6 @@ $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kitodo\Dlf\Task
     'title' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:harvestTask.title',
     'description' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:harvestTask.description',
     'additionalFields' => \Kitodo\Dlf\Task\HarvestAdditionalFieldProvider::class,
-];
-$GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kitodo\Dlf\Task\DeleteTask::class] = [
-    'extension' => $_EXTKEY,
-    'title' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:deleteTask.title',
-    'description' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:deleteTask.description',
-    'additionalFields' => \Kitodo\Dlf\Task\DeleteAdditionalFieldProvider::class,
-];
-$GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kitodo\Dlf\Task\OptimizeTask::class] = [
-    'extension' => $_EXTKEY,
-    'title' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:optimizeTask.title',
-    'description' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:optimizeTask.description',
-    'additionalFields' => \Kitodo\Dlf\Task\OptimizeAdditionalFieldProvider::class,
-];
-$GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][\Kitodo\Dlf\Task\SuggestBuildTask::class] = [
-    'extension' => $_EXTKEY,
-    'title' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:suggestBuildTask.title',
-    'description' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_tasks.xlf:suggestBuildTask.description',
-    'additionalFields' => \Kitodo\Dlf\Task\SuggestBuildAdditionalFieldProvider::class,
 ];
 // Register AJAX eID handlers.
 if ($GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['dlf']['general']['enableInternalProxy'] ?? false) {
@@ -156,8 +137,6 @@ $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['ext/install']['update'][\Kitodo\Dlf\U
     = \Kitodo\Dlf\Updates\MigrateSettings::class;
 $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['ext/install']['update'][\Kitodo\Dlf\Updates\FileLocationUpdater::class]
     = \Kitodo\Dlf\Updates\FileLocationUpdater::class;
-$GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['ext/install']['update'][\Kitodo\Dlf\Updates\UpdateSolrSchema::class]
-= \Kitodo\Dlf\Updates\UpdateSolrSchema::class;
 
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::configurePlugin(
     'Dlf',
@@ -339,13 +318,13 @@ $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['ext/install']['update'][\Kitodo\Dlf\U
 );
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::configurePlugin(
     'Dlf',
-    'Embedded3dViewer',
+    'View3D',
     [
-        \Kitodo\Dlf\Controller\Embedded3dViewerController::class => 'main',
+        \Kitodo\Dlf\Controller\View3DController::class => 'main',
     ],
     // non-cacheable actions
     [
-        \Kitodo\Dlf\Controller\Embedded3dViewerController::class => '',
+        \Kitodo\Dlf\Controller\View3DController::class => '',
     ]
 );
 

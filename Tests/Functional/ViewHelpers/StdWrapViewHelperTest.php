@@ -23,7 +23,7 @@ class StdWrapViewHelperTest extends FunctionalTestCase
     /**
      * @var bool Speed up this test case, it needs no database
      */
-    protected bool $initializeDatabase = false;
+    protected $initializeDatabase = false;
 
     /**
      * @test

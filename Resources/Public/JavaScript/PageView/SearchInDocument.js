@@ -277,8 +277,8 @@ $(document).ready(function() {
             "json"
         )
         .done(function (data) {
-            $('#tx-dlf-search-in-document-loading').hide();
-            $('#tx-dlf-search-in-document-clearing').show();
+            $('#tx-dfgviewer-sru-results-loading').hide();
+            $('#tx-dfgviewer-sru-results-clearing').show();
         });
     });
 

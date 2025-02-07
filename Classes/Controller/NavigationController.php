@@ -13,7 +13,6 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\MetsDocument;
 use Kitodo\Dlf\Domain\Model\PageSelectForm;
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
@@ -33,9 +32,9 @@ class NavigationController extends AbstractController
      *
      * @param PageSelectForm|NULL $pageSelectForm
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function pageSelectAction(PageSelectForm $pageSelectForm = null): ResponseInterface
+    public function pageSelectAction(PageSelectForm $pageSelectForm = NULL): void
     {
         if ($pageSelectForm) {
             $uri = $this->uriBuilder->reset()
@@ -49,10 +48,8 @@ class NavigationController extends AbstractController
                     ]
                 )
                 ->uriFor('main');
-            return $this->redirectToUri($uri);
+            $this->redirectToUri($uri);
         }
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -60,15 +57,15 @@ class NavigationController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
         }
 
         // Set default values if not set.
@@ -80,14 +77,6 @@ class NavigationController extends AbstractController
             // reassign requestData to viewData after assigning default values
             $this->viewData['requestData'] = $this->requestData;
         }
-
-        // get the closest previous sibling or leaf node
-        $prevDocumentUid = $this->documentRepository->getPreviousDocumentUid($this->document->getUid());
-        $this->view->assign('documentBack', $prevDocumentUid);
-
-        // get the closest next sibling or leaf node
-        $nextDocumentUid = $this->documentRepository->getNextDocumentUid($this->document->getUid());
-        $this->view->assign('documentForward', $nextDocumentUid);
 
         // Steps for X pages backward / forward. Double page view uses double steps.
         $pageSteps = $this->settings['pageStep'] * ($this->requestData['double'] + 1);
@@ -149,7 +138,5 @@ class NavigationController extends AbstractController
                 $this->view->assign('measurePages', $measurePages);
             }
         }
-
-        return $this->htmlResponse();
     }
 }

@@ -113,9 +113,6 @@
 			<trans-unit id="doublePageOff">
 				<source><![CDATA[Show single page]]></source>
 			</trans-unit>
-			<trans-unit id="downloadModel">
-				<source><![CDATA[Download model]]></source>
-			</trans-unit>
 			<trans-unit id="doublePageOn">
 				<source><![CDATA[Show double pages]]></source>
 			</trans-unit>
@@ -184,12 +181,6 @@
 			</trans-unit>
 			<trans-unit id="nextMeasure">
 				<source><![CDATA[Next Measure]]></source>
-			</trans-unit>
-			<trans-unit id="navigation.documentBack">
-				<source><![CDATA[Previous document]]></source>
-			</trans-unit>
-			<trans-unit id="navigation.documentForward">
-				<source><![CDATA[Next document]]></source>
 			</trans-unit>
 			<trans-unit id="selectPage">
 				<source><![CDATA[Page]]></source>

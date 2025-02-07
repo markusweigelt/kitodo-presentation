@@ -13,7 +13,6 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\Helper;
 use Kitodo\Dlf\Common\MetsDocument;
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
@@ -39,22 +38,20 @@ class TableOfContentsController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return $this->htmlResponse();
+            return;
         } else {
             $this->setPage();
 
             $this->view->assign('toc', $this->makeMenuArray());
         }
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -134,7 +131,7 @@ class TableOfContentsController extends AbstractController
         $entryArray['doNotLinkIt'] = 1;
         $entryArray['ITEM_STATE'] = 'NO';
 
-        $this->buildMenuLinks($entryArray, $entry['id'], $entry['points'] ?? null, $entry['targetUid'] ?? null);
+        $this->buildMenuLinks($entryArray, $entry['id'], $entry['points'], $entry['targetUid']);
 
         // Set "ITEM_STATE" to "CUR" if this entry points to current page.
         if (in_array($entry['id'], $this->activeEntries)) {
@@ -151,7 +148,7 @@ class TableOfContentsController extends AbstractController
             // 3. Current menu node has no corresponding images
             if (
                 $entryArray['ITEM_STATE'] == 'CUR'
-                || (array_key_exists('points', $entry) && is_string($entry['points']))
+                || is_string($entry['points'])
                 || empty($this->document->getCurrentDocument()->smLinks['l2p'][$entry['id']])
             ) {
                 $entryArray['_SUB_MENU'] = [];
@@ -244,7 +241,7 @@ class TableOfContentsController extends AbstractController
         $doc = $this->document->getCurrentDocument();
         if (
             $doc instanceof MetsDocument
-            && ((array_key_exists('points', $entry) && $entry['points'] === $doc->parentHref) || $this->isMultiElement($entry['type']))
+            && ($entry['points'] === $doc->parentHref || $this->isMultiElement($entry['type']))
             && !empty($this->document->getPartof())
         ) {
             unset($entry['points']);
@@ -263,18 +260,16 @@ class TableOfContentsController extends AbstractController
      */
     private function getAllLogicalUnits(): void
     {
+        $page = $this->requestData['page'];
         $physicalStructure = $this->document->getCurrentDocument()->physicalStructure;
-
-        if (isset($this->requestData['page']) &&
-            !empty($this->requestData['page'])
+        if (
+            !empty($page)
             && !empty($physicalStructure)
         ) {
-            $page = $this->requestData['page'];
             $structureMapLinks = $this->document->getCurrentDocument()->smLinks;
-
             $this->activeEntries = array_merge(
-                (array) ($structureMapLinks['p2l'][$physicalStructure[0]] ?? []),
-                (array) ($structureMapLinks['p2l'][$physicalStructure[$page]] ?? [])
+                (array) $structureMapLinks['p2l'][$physicalStructure[0]],
+                (array) $structureMapLinks['p2l'][$physicalStructure[$page]]
             );
             if (
                 !empty($this->requestData['double'])
@@ -282,7 +277,7 @@ class TableOfContentsController extends AbstractController
             ) {
                 $this->activeEntries = array_merge(
                     $this->activeEntries,
-                    (array) ($structureMapLinks['p2l'][$physicalStructure[$page + 1]] ?? [])
+                    (array) $structureMapLinks['p2l'][$physicalStructure[$page + 1]]
                 );
             }
         }

@@ -242,6 +242,6 @@ class MetsDocumentTest extends FunctionalTestCase
         self::assertEquals(3, $correct);
 
         $incorrect = $doc->getStructureDepth('ID_DOES_NOT_EXIST');
-        self::assertFalse($incorrect);
+        self::assertEquals(0, $incorrect);
     }
 }

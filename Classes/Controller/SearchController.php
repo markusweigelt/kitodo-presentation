@@ -19,12 +19,10 @@ use Kitodo\Dlf\Common\Solr\Solr;
 use Kitodo\Dlf\Domain\Model\Collection;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
-use Psr\Http\Message\ResponseInterface;
 use Solarium\Component\Result\FacetSet;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
-use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -84,15 +82,15 @@ class SearchController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function searchAction(): ResponseInterface
+    public function searchAction(): void
     {
         // if search was triggered, get search parameters from POST variables
         $this->searchParams = $this->getParametersSafely('searchParameter');
 
         // output is done by main action
-        return $this->redirect('main', null, null, ['searchParameter' => $this->searchParams]);
+        $this->forward('main', null, null, ['searchParameter' => $this->searchParams]);
     }
 
     /**
@@ -102,30 +100,25 @@ class SearchController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         $listViewSearch = false;
         // Quit without doing anything if required variables are not set.
         if (empty($this->settings['solrcore'])) {
             $this->logger->warning('Incomplete plugin configuration');
-            return $this->htmlResponse();
+            return;
         }
-
-        // Get additional fields for extended search.
-        $this->addExtendedSearch();
 
         // if search was triggered, get search parameters from POST variables
         $this->searchParams = $this->getParametersSafely('searchParameter');
-
         // if search was triggered by the ListView plugin, get the parameters from GET variables
-        // replace with $this->request->getQueryParams() when dropping support for Typo3 v11, see Deprecation-100596
         $listRequestData = GeneralUtility::_GPmerged('tx_dlf_listview');
         // Quit without doing anything if no search parameters.
         if (empty($this->searchParams) && empty($listRequestData)) {
             $this->logger->warning('Missing search parameters');
-            return $this->htmlResponse();
+            return;
         }
 
         if (isset($listRequestData['searchParameter']) && is_array($listRequestData['searchParameter'])) {
@@ -134,15 +127,13 @@ class SearchController extends AbstractController
             $GLOBALS['TSFE']->fe_user->setKey('ses', 'search', $this->searchParams);
         }
 
-        $this->searchParams = is_array($this->searchParams) ? array_filter($this->searchParams, 'strlen') : [];
-
         // sanitize date search input
-        if (array_key_exists('dateFrom', $this->searchParams) || array_key_exists('dateTo', $this->searchParams)) {
-            if (!array_key_exists('dateFrom', $this->searchParams) && array_key_exists('dateTo', $this->searchParams)) {
+        if (!empty($this->searchParams['dateFrom']) || !empty($this->searchParams['dateTo'])) {
+            if (empty($this->searchParams['dateFrom']) && !empty($this->searchParams['dateTo'])) {
                 $this->searchParams['dateFrom'] = '*';
             }
 
-            if (!array_key_exists('dateTo', $this->searchParams) && array_key_exists('dateFrom', $this->searchParams)) {
+            if (empty($this->searchParams['dateTo']) && !empty($this->searchParams['dateFrom'])) {
                 $this->searchParams['dateTo'] = 'NOW';
             }
 
@@ -161,7 +152,7 @@ class SearchController extends AbstractController
 
         // If a targetPid is given, the results will be shown by ListView on the target page.
         if (!empty($this->settings['targetPid']) && !empty($this->searchParams) && !$listViewSearch) {
-            return $this->redirect(
+            $this->redirect(
                 'main',
                 'ListView',
                 null,
@@ -174,7 +165,7 @@ class SearchController extends AbstractController
 
         // If no search has been executed, no variables have to be prepared.
         // An empty form will be shown.
-        if (!empty($this->searchParams)) {
+        if (is_array($this->searchParams) && !empty($this->searchParams)) {
             // get all sortable metadata records
             $sortableMetadata = $this->metadataRepository->findByIsSortable(true);
 
@@ -213,6 +204,9 @@ class SearchController extends AbstractController
             $this->addFacetsMenu();
         }
 
+        // Get additional fields for extended search.
+        $this->addExtendedSearch();
+
         // Add the current document if present to fluid. This way, we can limit further searches to this document.
         if (isset($this->requestData['id'])) {
             $currentDocument = $this->documentRepository->findByUid($this->requestData['id']);
@@ -225,8 +219,6 @@ class SearchController extends AbstractController
         }
 
         $this->view->assign('viewData', $this->viewData);
-
-        return $this->htmlResponse();
     }
 
     /**
@@ -279,7 +271,7 @@ class SearchController extends AbstractController
         // Set search query.
         $searchParams = $this->searchParams;
         if (
-            (array_key_exists('fulltext', $searchParams))
+            (!empty($searchParams['fulltext']))
             || preg_match('/' . $fields['fulltext'] . ':\((.*)\)/', trim($searchParams['query']), $matches)
         ) {
             // If the query already is a fulltext query e.g using the facets
@@ -301,7 +293,7 @@ class SearchController extends AbstractController
         }
 
         // add filter query for date search
-        if (array_key_exists('dateFrom', $this->searchParams) && array_key_exists('dateTo', $this->searchParams)) {
+        if (!empty($this->searchParams['dateFrom']) && !empty($this->searchParams['dateTo'])) {
             // combine dateFrom and dateTo into filterquery as range search
             $search['params']['filterquery'][]['query'] = '{!join from=' . $fields['uid'] . ' to=' . $fields['uid'] . '}' . $fields['date'] . ':[' . $this->searchParams['dateFrom'] . ' TO ' . $this->searchParams['dateTo'] . ']';
         }
@@ -329,7 +321,7 @@ class SearchController extends AbstractController
             }
         }
 
-        if (array_key_exists('fq', $this->searchParams) && is_array($this->searchParams['fq'])) {
+        if (isset($this->searchParams['fq']) && is_array($this->searchParams['fq'])) {
             foreach ($this->searchParams['fq'] as $fq) {
                 $search['params']['filterquery'][]['query'] = $fq;
             }
@@ -403,9 +395,7 @@ class SearchController extends AbstractController
         $collections = null;
         if (array_key_exists('collection', $this->searchParams)) {
             foreach (explode(',', $this->searchParams['collection']) as $collectionEntry) {
-                if (!empty($collectionEntry)) {
-                    $collections[] = $this->collectionRepository->findByUid((int) $collectionEntry);
-                }
+                $collections[] = $this->collectionRepository->findByUid((int) $collectionEntry);
             }
         }
         if ($collections) {
@@ -582,9 +572,13 @@ class SearchController extends AbstractController
 
         // Get field selector options.
         $searchFields = GeneralUtility::trimExplode(',', $this->settings['extendedFields'], true);
-        $extendedSlotCount = range(0, (int) $this->settings['extendedSlotCount'] - 1);
 
-        $this->view->assign('extendedSlotCount', $extendedSlotCount);
+        $slotCountArray = [];
+        for ($i = 0; $i < $this->settings['extendedSlotCount']; $i++) {
+            $slotCountArray[] = $i;
+        }
+
+        $this->view->assign('extendedSlotCount', $slotCountArray);
         $this->view->assign('extendedFields', $this->settings['extendedFields']);
         $this->view->assign('operators', ['AND', 'OR', 'NOT']);
         $this->view->assign('searchFields', $searchFields);

@@ -12,7 +12,6 @@
 namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\SolrPaginator;
-use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
@@ -74,12 +73,11 @@ class ListViewController extends AbstractController
      *
      * @access public
      *
-     * @return ResponseInterface the response
+     * @return void
      */
-    public function mainAction(): ResponseInterface
+    public function mainAction(): void
     {
         $this->searchParams = $this->getParametersSafely('searchParameter');
-        $this->searchParams = is_array($this->searchParams) ? array_filter($this->searchParams, 'strlen') : [];
 
         // extract collection(s) from collection parameter
         $collections = [];
@@ -103,7 +101,7 @@ class ListViewController extends AbstractController
 
         $solrResults = null;
         $numResults = 0;
-        if (!empty($this->searchParams)) {
+        if (is_array($this->searchParams) && !empty($this->searchParams)) {
             $solrResults = $this->documentRepository->findSolrByCollections($collections, $this->settings, $this->searchParams, $listedMetadata, $indexedMetadata);
             $numResults = $solrResults->getNumFound();
 
@@ -125,7 +123,5 @@ class ListViewController extends AbstractController
         $this->view->assign('lastSearch', $this->searchParams);
         $this->view->assign('sortableMetadata', $sortableMetadata);
         $this->view->assign('listedMetadata', $listedMetadata);
-
-        return $this->htmlResponse();
     }
 }
