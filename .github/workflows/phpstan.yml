@@ -17,6 +17,7 @@ jobs:
       - name: Install dependencies
         uses: php-actions/composer@v6
         with:
+          php_version: "8.3"
           command: update
 
       - name: PHPStan Static Analysis
