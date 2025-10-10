@@ -267,6 +267,18 @@ $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['ext/install']['update'][\Kitodo\Dlf\U
 
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::configurePlugin(
     'Dlf',
+    'AddDocument',
+    [
+        \Kitodo\Dlf\Controller\AddDocumentController::class => 'main',
+    ],
+    // non-cacheable actions
+    [
+        \Kitodo\Dlf\Controller\AddDocumentController::class => 'main',
+    ]
+);
+
+\TYPO3\CMS\Extbase\Utility\ExtensionUtility::configurePlugin(
+    'Dlf',
     'Basket',
     [
         \Kitodo\Dlf\Controller\BasketController::class => 'main, add, basket',

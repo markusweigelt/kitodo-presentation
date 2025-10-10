@@ -15,7 +15,10 @@
 <f:if condition="{renderAddDocumentTool}">
     <f:then>
         <a href="#" title="{f:translate(key:'tools.adddocument.label', extensionName:'dlf')}">{f:translate(key:'tools.adddocument.label', extensionName:'dlf')}</a>
-        <f:form method="post" pluginName="pageview" action="addDocument" addQueryString="untrusted" name="formAddDocument" object="{formAddDocument}" extensionName="dlf" controller="PageView">
+        <f:form method="post" pluginName="pageview" action="main" name="formAddDocument" object="{formAddDocument}" extensionName="dlf" controller="PageView"
+                additionalParams="{'tx_dlf[id]':'{viewData.partlyEncodedId}'}"
+                argumentsToBeExcludedFromQueryString="{0: 'tx_dlf[measure]', 1: 'tx_dlf[id]'}"
+            >
             <p class="add-document-description">{f:translate(key:'tools.adddocument.description', extensionName:'dlf')}</p>
             <label for="location-field">{f:translate(key:'tools.adddocument.label', extensionName:'dlf')}</label>
             <f:form.textfield property="location" id="location-field" placeholder="{f:translate(key:'tools.adddocument.placeholder', extensionName:'dlf')}" required="required" />

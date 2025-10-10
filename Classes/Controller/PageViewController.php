@@ -107,6 +107,8 @@ class PageViewController extends AbstractController
             return $this->multiviewRedirect();
         }
 
+
+
         $this->requestData['double'] = MathUtility::forceIntegerInRange($this->requestData['double'], 0, 1, 0);
 
         $documentAnnotation = DocumentAnnotation::getInstance($this->document);
@@ -144,7 +146,7 @@ class PageViewController extends AbstractController
 
         $this->view->assign('multiview', $this->requestData['multiview'] ?? null);
         if ($this->requestData['multiview'] ?? false) {
-            $this->multipageNavigation();
+            //$this->multipageNavigation();
         }
 
         $this->view->assign('images', $this->images);
@@ -277,6 +279,7 @@ class PageViewController extends AbstractController
      */
     public function addDocumentAction(FormAddDocument $formAddDocument): ResponseInterface
     {
+
         if (GeneralUtility::isValidUrl($formAddDocument->getLocation())) {
             $nextMultipleSourceKey = 0;
             if (isset($this->requestData['multipleSource']) && is_array($this->requestData['multipleSource'])) {
