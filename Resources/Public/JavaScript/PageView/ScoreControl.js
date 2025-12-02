@@ -257,7 +257,7 @@ const dlfViewerScoreControl = function (dlfViewer, pagebeginning, pagecount) {
           }
         });
         this.measuresLoaded = true;
-      }, 2000);
+      }, 500);
     }
   };
 
@@ -272,8 +272,15 @@ const dlfViewerScoreControl = function (dlfViewer, pagebeginning, pagecount) {
 dlfViewerScoreControl.prototype.loadScoreData = function (scoreData, tk) {
   var target = document.getElementById('tx-dlf-score-' + this.dlfViewer.counter);
   // Const target = document.getElementById('tx-dlf-score');
+  let height = 2970;
+  let width = 2100;
 
-  var extent = [-2100, -2970, 2100, 2970];
+  if(this.dlfViewer.images && this.dlfViewer.images.length === 1) {
+    height = this.dlfViewer.images[0].height;
+    width = this.dlfViewer.images[0].width;
+  }
+
+  var extent = [-width, -height, width, height];
   // [offsetWidth, -imageSourceObj.height, imageSourceObj.width + offsetWidth, 0]
 
   var proj = new ol.proj.Projection({
@@ -308,8 +315,6 @@ dlfViewerScoreControl.prototype.loadScoreData = function (scoreData, tk) {
   var svgContainer = document.createElement('div');
   svgContainer.innerHTML = scoreData;
 
-  const width = 2100;
-  const height = 2970;
   svgContainer.style.width = width + 'px';
   svgContainer.style.height = height + 'px';
   svgContainer.style.transformOrigin = 'top left';
